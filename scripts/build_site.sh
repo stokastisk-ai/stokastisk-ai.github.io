@@ -21,13 +21,15 @@ $PY scripts/stage_source.py --out "$STAGE/stokastisk" "${SDK_ARG[@]}"
 export STAGED="$STAGE/stokastisk"
 ( cd "$STAGED" && $PY -m great_docs.cli build --config website/great-docs.yml )
 $PY scripts/postprocess_site.py --staged "$STAGED"
+# keep the finished site for the Pages artifact / local preview
+rm -rf _site && cp -a "$STAGED/website/_site" _site
 if [ "$VALIDATE" = 1 ]; then
   mkdir -p reports
   ( cd "$STAGED" && $PY -m great_docs.cli seo --config website/great-docs.yml )
   $PY scripts/check_site.py --site "$STAGED/website/_site" --release "$STAGED/RELEASE.json"
   $PY scripts/api_coverage.py --staged "$STAGED"
-  ( cd "$STAGED" && $PY -m great_docs.cli check-links --config website/great-docs.yml --docs-only ) || true
+  # external link check: one retry for network flakiness, then a hard failure (never silently ignored)
+  ( cd "$STAGED" && $PY -m great_docs.cli check-links --config website/great-docs.yml --docs-only ) \
+    || ( sleep 10; cd "$STAGED" && $PY -m great_docs.cli check-links --config website/great-docs.yml --docs-only )
 fi
-# keep the finished site for the Pages artifact / local preview
-rm -rf _site && cp -a "$STAGED/website/_site" _site
 echo "site ready: $(pwd)/_site"

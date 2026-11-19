@@ -14,8 +14,8 @@ source:
   enabled: true
   branch: SDK_COMMIT   # replaced by scripts/stage_source.py with the pinned SDK commit, so links never move
 
-# Exactly one canonical URL: the GitHub project site of the stokastisk-docs repository.
-site_url: https://stokastisk-ai.github.io/stokastisk-docs/
+# Exactly one canonical URL: the organisation site (repository stokastisk-ai/stokastisk-ai.github.io).
+site_url: https://stokastisk-ai.github.io/
 
 pypi: false             # Stokastisk is distributed from Hugging Face + a PEP 503 index, not PyPI
 package_info_page: false
@@ -55,7 +55,7 @@ seo:
     allow_all: true
   canonical:
     enabled: true
-    base_url: https://stokastisk-ai.github.io/stokastisk-docs/
+    base_url: https://stokastisk-ai.github.io/
   title_template: "{page_title} | {site_name}"
   structured_data:
     enabled: true
@@ -95,11 +95,25 @@ user_guide:
       - kaggle-examples.qmd
       - release-verification.qmd
       - production-limitations.qmd
+      - examples.qmd
   - section: "Design"
     contents:
       - architecture.qmd
       - dependency-compatibility.qmd
+      - native-build-release.qmd
       - faq.qmd
+  - section: "API details"
+    contents:
+      - api-map.qmd
+      - api-engine-config.qmd
+      - api-errors.qmd
+      - api-serving-structured.qmd
+      - api-parallel.qmd
+      - api-topology-limits.qmd
+      - api-diagnostics-compat.qmd
+      - api-telemetry.qmd
+      - api-cuda-nccl-communication.qmd
+      - api-benchmarks.qmd
   - section: "Reference index"
     contents:
       - module-index.qmd

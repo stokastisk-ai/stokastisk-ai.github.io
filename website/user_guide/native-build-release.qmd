@@ -1,0 +1,40 @@
+---
+title: "Native binaries, build and release engineering"
+description: "How the Stokastisk wheel is built: byte-pinned vLLM 0.25.1 natives for SM75 and CUDA 13.0, the Flash-free transform, hash-pinned dependency locks, audits, the optional C++ transport and the version policy."
+guide-section: "Design"
+---
+
+This page explains provenance and process from the repository's build scripts, `BUILD.md`, `RELEASE.json`, `VERSION_POLICY.md` and the build-5 audit archive. It does not document the whole upstream vLLM tree.
+
+## Native binaries
+
+| Origin | Files | Notes |
+|---|---|---|
+| bundled vLLM 0.25.1 | `vllm/_C_stable_libtorch.abi3.so`, `vllm/_moe_C_stable_libtorch.abi3.so`, `vllm/_rust_tool_parser.abi3.so`, `vllm/cumem_allocator.abi3.so`, `vllm/fs_io_C.abi3.so`, `vllm/spinloop.abi3.so` | six objects, byte-identical to the pinned base wheel in every build; compiled once for `sm_75` with CUDA 13.0 only (`scripts/build_vllm_sm75.sh`: `TORCH_CUDA_ARCH_LIST=7.5`, `CMAKE_CUDA_ARCHITECTURES=75`, CUDA 13.0 toolkit) |
+| Stokastisk | `native/host_staged_xfer.cpp` (99 lines) | **experimental, optional**, not shipped as a binary. Host-staged GPU-to-GPU copy using only the CUDA Runtime API: device to pinned host buffer to device, chunks rotating through `n` buffers with CUDA events handing buffers between stages. No kernels; links `libcudart.so.13`. Built on demand with `nvcc -gencode arch=compute_75,code=sm_75` by `communication.native.build_native` |
+
+The base wheel is `vllm-0.25.1-cp38-abi3-linux_x86_64.whl` (SHA256 `cc3bcafb6516791990ca302073ae153a08465d3df1e460d666e3ec09b4e98f5e`), attached to the GitHub release `v0.1.0`. It is a **build input**, not an end-user install.
+
+## Build pipeline
+
+1. `scripts/release/build_wheel_release.py --build-tag N` builds the integrated wheel (`build_integrated_wheel.py`), which applies the deterministic Flash-free transform `t4_flash_free.py` to the vLLM tree and adds the SDK from `sdk/`. No GPU, Kaggle session or network is needed.
+2. `scripts/audit/verify_integrated_wheel.py` verifies the wheel independently (RECORD hashes, Flash scan, natives equal to the pinned wheel, dependency pins); `scripts/audit/native_audit.py` inspects every native object (ELF, NEEDED libraries, CUDA runtime linkage, SM targets); `scripts/audit/wheel_delta.py` compares two wheels member by member.
+3. A second build must give the identical SHA256 (reproducibility check).
+4. The wheel is hosted on Hugging Face (`wheels/`); `scripts/release/make_pip_index.py` writes the PEP 503 pages for the `gh-pages` branch of the SDK repository.
+5. `tests/test_release_consistency.py` fails if the new hash disagrees in `RELEASE.json`, `INSTALL.md`, `RELEASE.md`, `README.md`, the model-card source, the guide or the notebooks.
+
+## Dependencies
+
+`requirements/<profile>.roots` hold exact pins; `scripts/release/lock_closure.py` resolves them against the protected Kaggle inventory (`requirements/kaggle-baseline-2026-11-13.json`) into `<profile>.lock` files with the SHA256 of every compatible wheel. Details: [Dependency compatibility](dependency-compatibility.qmd).
+
+## Version policy
+
+The project version is **locked at `0.1.0`**. Ordinary development activity (features, fixes, documentation, notebooks, uploads, benchmarks) never changes it; only the PEP 427 build tag in the wheel name is incremented when shipped SDK content must change. `verify_project_version.py` checks every declaration. Builds 3, 4 and 5 therefore all report `stokastisk.__version__ == "0.1.0"`.
+
+## Tests
+
+The repository has 21 test modules with 277 test functions, run on CPU only (`CUDA_VISIBLE_DEVICES= python3.13 -m pytest tests`). Some need CPU PyTorch or the pinned vLLM wheel and are reported as not run when those are absent. No test in the documentation build runs a GPU.
+
+## What this site did not verify
+
+The documentation build reads these files statically. It did not rebuild the wheel, execute the native audit or run any CUDA code.

@@ -22,7 +22,7 @@ Thin PyTorch-backed helpers that never touch vLLM's own streams:
 
 ```python
 from stokastisk.cuda.memory import mem_info
-print(mem_info(0))            # free and total memory for GPU 0
+print(mem_info(0))            # {'free_mib': ..., 'total_mib': ..., 'used_mib': ...} for GPU 0
 ```
 
 ## `stokastisk.nccl`

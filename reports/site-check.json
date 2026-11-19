@@ -1,25 +1,25 @@
 {
  "failures": [],
  "warnings": [
-  "skills.html: noindex (noindex, nofollow)",
-  "169 pages have more than one <h1> (Great Docs API-page template; e.g. changelog.html, reference/AttentionBackendError.html, reference/CUDA_BUILD_TARGET.html)",
-  "356 links to anchors that are not in the target page (Great Docs-generated reference links such as #stokastisk.LLM; e.g. index.html -> #stokastisk.LLM)"
+  "skills.html: noindex (noindex, nofollow)"
  ],
  "info": {
-  "html_pages": 180,
-  "pages_with_multiple_h1": 169,
-  "unique_titles": 179,
-  "unique_descriptions": 179,
+  "html_pages": 192,
+  "pages_with_multiple_h1": 0,
+  "unique_titles": 191,
+  "unique_descriptions": 191,
   "broken_internal_links": 0,
-  "missing_anchors_total": 356,
-  "missing_anchors_in_hand_written_pages": 0,
-  "sitemap_urls": 179,
-  "python_blocks_parsed": 25,
+  "missing_anchors": 0,
+  "legacy_redirect_pages": 192,
+  "legacy_redirect_errors": 0,
+  "sitemap_urls": 191,
+  "python_blocks_parsed": 31,
   "python_blocks_unparseable": 0,
   "current_wheel": {
    "file": "stokastisk-0.1.0-5-cp313-cp313-linux_x86_64.whl",
    "sha256": "fe80d7c36fa78cf8a26feb1e00bb5f1f006ca45a027450353603976320ae0b3e"
   },
-  "published_files": 437
+  "agent_skill_files_checked": 6,
+  "published_files": 653
  }
 }

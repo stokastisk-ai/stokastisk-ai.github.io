@@ -1,0 +1,253 @@
+# Documentation notes for SDK objects whose released source has no docstring (or an incomplete one).
+# Written for this site from the pinned SDK source (sdk/stokastisk at SOURCE.lock.json sdk.commit); they are NOT SDK docstrings and
+# never change the released wheel. Keys are dotted names. Fields: s summary, p {param: meaning}, r returns, x {Exception: when},
+# e example, rel [related names], status "internal" for helpers that are public by naming only.
+# scripts/gen_api_details.py renders them next to the signature extracted from the source; scripts/api_coverage.py counts an object as
+# fully documented only when it has a summary (docstring or note) AND, if it takes parameters, a meaning for each non-obvious one.
+
+stokastisk.validate_kaggle_t4: {s: "Alias of validate_environment kept for baseline API compatibility.", rel: [stokastisk.diagnostics.validate_environment]}
+stokastisk._version.VLLM_BASE_VERSION: {s: "Version string of the bundled vLLM tree (\"0.25.1\"). Exported as stokastisk.VLLM_BASE_VERSION."}
+stokastisk._version.CUDA_BUILD_TARGET: {s: "CUDA toolkit target of the bundled native binaries (13.0). Exported as stokastisk.CUDA_BUILD_TARGET."}
+stokastisk._version.GPU_COMPUTE_CAPABILITY: {s: "Tuple (7, 5): the compute capability the native binaries are compiled for (SM75, Tesla T4). Exported as stokastisk.GPU_COMPUTE_CAPABILITY."}
+
+stokastisk.benchmarks.baseline.TOPIC_WORDS: {s: "Fixed word list from which Workload.prompts() builds deterministic prompts.", status: internal}
+stokastisk.benchmarks.baseline.Workload:
+  s: "Immutable description of one benchmark workload: how many prompts, how long, how many warm-up and measured repeats. Every strategy is run on identical Workloads."
+  p: {name: "Label used in reports.", batch_size: "Prompts per batch.", input_tokens: "Approximate prompt length; prompts are built from a fixed word list (one word is about 1-2 tokens).", output_tokens: "Tokens to generate per prompt.", warmup: "Discarded warm-up repeats.", repeats: "Measured repeats; all are recorded, never only the best.", temperature: "Sampling temperature (0.0 = greedy)."}
+stokastisk.benchmarks.baseline.Workload.prompts: {s: "Return the deterministic list of batch_size prompts for this workload.", r: "list[str]"}
+stokastisk.benchmarks.baseline.SHORT: {s: "Preset Workload: batch 8, 16 input tokens, 64 output tokens."}
+stokastisk.benchmarks.baseline.LONG: {s: "Preset Workload: batch 8, 1024 input tokens, 64 output tokens."}
+stokastisk.benchmarks.baseline.SCALING: {s: "Preset list of Workloads with batch sizes 1, 8, 16, 32 and 64 (64 input, 64 output tokens)."}
+stokastisk.benchmarks.baseline.measure:
+  p: {llm: "A live stokastisk.LLM.", workload: "The Workload to time.", sampler_interval: "Seconds between GPU samples taken during the run."}
+  r: "dict with every repeat's timings and summary statistics plus GPU samples."
+stokastisk.benchmarks.baseline.run_engine:
+  p: {config: "StokastiskConfig for the engine.", model: "Model id or path.", workloads: "One Workload or a list.", label: "Optional report label.", sampler_interval: "Seconds between GPU samples."}
+  r: "dict of results per workload plus provenance."
+  rel: [stokastisk.telemetry.report.provenance]
+stokastisk.benchmarks.communication.SIZES: {s: "Default transfer sizes (bytes) swept by the communication benchmark."}
+stokastisk.benchmarks.communication.bench_host_staged:
+  p: {src: "Source GPU index.", dst: "Destination GPU index.", sizes: "Transfer sizes in bytes.", iters: "Timed iterations.", warmup: "Warm-up iterations.", chunk_bytes: "Chunk size of the staging buffers.", n_buffers: "Number of pinned staging buffers in the ring.", native: "NativeHostStaged class to use the C++ path instead of the torch path."}
+stokastisk.benchmarks.communication.bench_nccl: {p: {rank: "This process's NCCL rank (0 or 1).", sizes: "Transfer sizes in bytes.", iters: "Timed iterations.", warmup: "Warm-up iterations."}}
+stokastisk.benchmarks.communication.compare: {p: {host_staged: "Result of bench_host_staged.", nccl: "Result of bench_nccl (rank 1 view)."}}
+stokastisk.benchmarks.gpu_balance.from_replica_record: {s: "Convert one ReplicaPool run record into compute / communication / idle accounting and imbalance for the two GPUs.", p: {rec: "A replica benchmark record (see benchmarks.replica_parallel.run).", workload: "Workload name to look up in the record."}, r: "dict with per-worker metrics and imbalance percentages."}
+stokastisk.benchmarks.pipeline_parallel.config_for: {s: "Build the StokastiskConfig for a PP=2 run; keyword arguments override config fields.", r: "StokastiskConfig"}
+stokastisk.benchmarks.pipeline_parallel.run: {s: "Run the shared benchmark with PP=2 (experimental). Stage-level compute and communication times are reported as NOT_MEASURED because vLLM's public API does not expose them.", p: {model: "Model id or path.", workloads: "Workload or list of Workloads.", "**kw": "Overrides forwarded to config_for."}}
+stokastisk.benchmarks.replica_parallel.run: {s: "Run the benchmark through a ReplicaPool with one TP=1 engine per listed GPU.", p: {model: "Model id or path.", workloads: "Workload or list.", devices: "GPU indices, default (0, 1).", "**kw": "Overrides forwarded to the config."}, r: "dict of results and per-GPU balance."}
+stokastisk.benchmarks.report.comparison_table: {s: "Markdown table comparing strategies for one workload; strategies without a record are listed as NOT_RUN.", p: {records: "Mapping strategy name to benchmark record.", workload: "Workload name."}, r: "Markdown text."}
+stokastisk.benchmarks.report.relative_to: {s: "Ratio of each strategy's throughput to a base strategy for one workload (None when not measurable).", p: {records: "Mapping strategy to record.", workload: "Workload name.", base: "Base strategy key, default 'tp1'."}}
+stokastisk.benchmarks.tensor_parallel.config_for: {s: "Build the StokastiskConfig for a TP run.", p: {tp: "tensor_parallel_size (1 or 2).", "**kw": "Config overrides."}, r: "StokastiskConfig"}
+stokastisk.benchmarks.tensor_parallel.run: {s: "Run the shared benchmark with the given tensor-parallel size.", p: {model: "Model id or path.", workloads: "Workload or list.", tp: "tensor_parallel_size.", "**kw": "Config overrides."}}
+
+stokastisk.communication.cuda_transport.HostStagedTransport:
+  s: "Experimental GPU-to-GPU copy staged through pinned host memory, for machines without CUDA peer access. Not used by the vLLM engine; nothing selects it automatically."
+  p: {src_device: "Source GPU index.", dst_device: "Destination GPU index.", chunk_bytes: "Staging chunk size in bytes (default 4 MiB).", n_buffers: "Pinned buffers in the ring (default 2)."}
+  x: {ValueError: "invalid device indices or sizes."}
+stokastisk.communication.native.build_native: {s: "Compile native/host_staged_xfer.cpp with nvcc for the given architecture (needs nvcc).", p: {src: "Path to the C++ source.", out_dir: "Directory for the shared library.", arch: "CUDA architecture, default sm_75."}, r: "Path to the built library, or None if the build was not possible."}
+stokastisk.communication.native.load_native: {s: "Load the compiled host-staged transfer library.", p: {path: "Library path; None searches the default location."}, r: "The loaded library handle (or None when unavailable)."}
+stokastisk.communication.native.NativeHostStaged: {s: "Host-staged transfer implemented by the optional C++ library.", p: {src_device: "Source GPU.", dst_device: "Destination GPU.", chunk_bytes: "Chunk size.", n_buffers: "Number of buffers.", lib: "A library from load_native."}, x: {RuntimeError: "the native library is unavailable."}}
+stokastisk.communication.native.NativeHostStaged.transfer: {s: "Copy src_tensor on the source device into dst_tensor on the destination device through the native path.", p: {src_tensor: "Source CUDA tensor.", dst_tensor: "Destination CUDA tensor of equal size."}, r: "dict of timing/size information."}
+stokastisk.communication.native.NativeHostStaged.close: {s: "Release the native buffers."}
+stokastisk.communication.nccl.time_allreduce: {s: "Time an NCCL all-reduce of nbytes inside an initialised 2-rank group.", p: {nbytes: "Payload size in bytes.", iters: "Timed iterations.", warmup: "Warm-up iterations."}}
+stokastisk.communication.pinned_memory.PinnedBufferRing: {s: "Ring of page-locked host buffers used as staging memory.", p: {n_buffers: "Number of buffers.", nbytes: "Size of each buffer in bytes."}, x: {ValueError: "non-positive counts or sizes."}}
+stokastisk.communication.pinned_memory.PinnedBufferRing.host_bytes: {s: "Total pinned host memory held by the ring, in bytes."}
+stokastisk.communication.synchronization.BufferTicket: {s: "Bookkeeping object that records the CUDA events guarding one staging buffer so it is not reused too early.", status: internal}
+stokastisk.communication.transport_registry.TRANSPORTS: {s: "Registry data of the known transports with their honest status."}
+stokastisk.communication.transport_registry.list_transports: {s: "Return the known transports and their status. Nothing is selected automatically.", r: "dict name -> status record."}
+
+stokastisk.compat.SM75: {s: "The compute capability tuple (7, 5) used as the default target."}
+stokastisk.compat.BLOCKING: {s: "Feature statuses that make check_feature raise."}
+stokastisk.compat.FEATURES: {s: "The feature table: name -> {status, evidence, notebooks, note}. stokastisk.feature_matrix() returns a copy. Rendered on the Feature matrix page."}
+stokastisk.compat.QUANT_MIN_CAPABILITY: {s: "Minimum compute capability per vLLM quantization method, with a note; used by check_quantization."}
+stokastisk.compat.UNSUPPORTED_ARCHITECTURE_MARKERS: {s: "Architecture-name markers refused by check_model (for example Mistral-family)."}
+stokastisk.compat.MODEL_EVIDENCE: {s: "Registry of the exact Hugging Face checkpoints that were run on Kaggle (modes, max_model_len, evidence, limitations). check_model reads it."}
+stokastisk.compat.KAGGLE_VERIFIED_ARCHITECTURES: {s: "Architectures exercised by at least one verified checkpoint (Qwen2ForCausalLM)."}
+stokastisk.compat.get_feature: {s: "Return one feature record without raising for blocking statuses.", p: {name: "Feature key."}, r: "dict record.", x: {StokastiskCompatibilityError: "unknown feature name."}}
+stokastisk.compat.STUB_MODULE: {s: "Module path of the placeholder that replaced removed Flash-family modules.", status: internal}
+stokastisk.compat.read_registry: {s: "Read the architecture registry of a vLLM tree: architecture name -> (module, class).", p: {package_root: "Root of the vllm package; None uses the installed one."}, x: {StokastiskCompatibilityError: "the registry cannot be read."}}
+stokastisk.compat.check_feature: {p: {name: "Feature key from FEATURES."}}
+stokastisk.compat.check_dtype: {p: {dtype: "Requested dtype string or None.", capability: "(major, minor) compute capability, default (7, 5)."}, r: "The accepted dtype string."}
+stokastisk.compat.check_quantization: {p: {method: "vLLM quantization method name or None.", capability: "(major, minor) capability."}, r: "dict describing the method and its minimum capability."}
+stokastisk.compat.check_model:
+  p: {model: "Hugging Face id or local directory.", architectures: "Architecture names to check when no model/config is available.", package_root: "vLLM package root for the registry.", capability: "(major, minor) capability.", dtype: "dtype to validate, default 'half'.", quantization: "Quantization method to validate.", mode: "Parallel mode such as 'TP=2' to look up in the recorded runs."}
+  r: "dict with status, model_status, architecture_status, tested_modes, mode_status, evidence, limitations and note."
+  rel: [stokastisk.compat.MODEL_EVIDENCE]
+
+stokastisk.config.ALLOWED_ATTENTION_BACKENDS: {s: "Attention backends accepted by StokastiskConfig (only TRITON_ATTN)."}
+stokastisk.config.FORBIDDEN_ATTENTION_MARKERS: {s: "Name fragments that identify Flash-family backends, which are rejected."}
+stokastisk.config.ALLOWED_STRUCTURED_OUTPUT_BACKENDS: {s: "Structured-output backends accepted (xgrammar); 'auto' is refused because it silently falls back."}
+stokastisk.config.EXECUTION_STRATEGIES: {s: "Valid execution_strategy values."}
+stokastisk.config.EXPERIMENTAL_STRATEGIES: {s: "Strategies reported by StokastiskConfig.is_experimental (pipeline_parallel, replica_parallel)."}
+stokastisk.config.MAX_GPUS: {s: "Maximum world size (2)."}
+stokastisk.config.NCCL_ENV_NO_P2P: {s: "NCCL environment applied by apply_environment: NCCL_P2P_DISABLE=1, NCCL_IB_DISABLE=1, NCCL_CUMEM_ENABLE=0."}
+stokastisk.config.VLLM_ENV_NO_FLASHINFER: {s: "vLLM environment applied by apply_environment: FlashInfer sampler and all-reduce disabled."}
+stokastisk.config.StokastiskConfig:
+  s: "Validated dataclass holding every engine setting. Invalid values raise ConfigurationError (or UnsupportedParallelismError) at construction, before any GPU work."
+  p: {tensor_parallel_size: "1 or 2.", pipeline_parallel_size: "1 or 2 (experimental).", execution_strategy: "single_gpu, tensor_parallel, pipeline_parallel, replica_parallel or auto; None infers from TP/PP.", replica_devices: "GPU indices for replica_parallel.", dtype: "'half' (FP16); bfloat16 is refused.", kv_cache_dtype: "Passed to vLLM.", attention_backend: "Only TRITON_ATTN.", enforce_eager: "Disable CUDA graphs and torch.compile.", disable_custom_all_reduce: "Avoid peer-access-dependent all-reduce.", gpu_memory_utilization: "Fraction of each GPU vLLM may use (0.1-0.98).", max_model_len: "Context length or None.", structured_output_backend: "Pinned to xgrammar.", apply_nccl_env: "Whether apply_environment exports nccl_env.", nccl_env: "NCCL variables to export."}
+  x: {ConfigurationError: "an invalid value or a refused backend/dtype.", UnsupportedParallelismError: "TP x PP above 2 or a strategy/size mismatch."}
+stokastisk.config.StokastiskConfig.world_size: {s: "tensor_parallel_size x pipeline_parallel_size."}
+stokastisk.config.StokastiskConfig.is_experimental: {s: "True when the effective strategy is pipeline_parallel or replica_parallel."}
+stokastisk.config.StokastiskConfig.validate: {s: "Re-run all checks on the current field values.", x: {ConfigurationError: "invalid value.", UnsupportedParallelismError: "invalid parallel layout."}}
+stokastisk.config.StokastiskConfig.from_env: {s: "Build a config from STOKASTISK_* environment variables (unset ones keep the defaults).", p: {prefix: "Variable prefix, default 'STOKASTISK_'."}, x: {ConfigurationError: "an unparsable value."}}
+stokastisk.config.StokastiskConfig.engine_kwargs: {s: "Keyword arguments handed to the vLLM engine, derived from the config.", r: "dict"}
+stokastisk.config.StokastiskConfig.as_dict: {s: "Plain dict of all fields.", r: "dict"}
+
+stokastisk.cuda.device.device_count: {s: "Number of CUDA devices visible to PyTorch; 0 when torch or CUDA is unavailable (never raises).", r: "int"}
+stokastisk.cuda.device.on_device: {s: "Context manager that makes the given GPU current (torch.cuda.device).", p: {index: "GPU index."}}
+stokastisk.cuda.device.synchronize: {s: "Block until all work on the device has finished.", p: {index: "GPU index; None means the current device."}}
+stokastisk.cuda.events.new_event: {s: "Create a CUDA event.", p: {timing: "Enable timing (needed for elapsed_ms)."}}
+stokastisk.cuda.events.record: {s: "Record the event on a stream and return it.", p: {event: "A CUDA event.", stream: "Stream to record on; None = current stream."}}
+stokastisk.cuda.events.elapsed_ms: {s: "Milliseconds between two timing events (synchronises the end event).", p: {start: "Start event.", end: "End event."}, r: "float"}
+stokastisk.cuda.memory.mem_info: {s: "Free, total and used memory of a GPU in MiB.", p: {device: "GPU index."}, r: "dict with keys free_mib, total_mib, used_mib."}
+stokastisk.cuda.memory.pinned_empty: {s: "Allocate an uninitialised page-locked uint8 host tensor.", p: {nbytes: "Size in bytes."}}
+stokastisk.cuda.memory.timed_copy: {p: {dst: "Destination tensor.", src: "Source tensor.", stream: "Stream to copy on."}, r: "dict with bytes and ms."}
+stokastisk.cuda.streams.create_stream: {s: "Create your own CUDA stream on a device (do not enqueue onto vLLM's streams).", p: {device: "GPU index.", priority: "Stream priority."}}
+stokastisk.cuda.streams.stream_synchronize: {s: "Block until the stream's queued work has finished.", p: {stream: "A CUDA stream."}}
+
+stokastisk.dependencies.LOCKED: {s: "Import names of the hash-pinned packages per profile."}
+stokastisk.dependencies.BASELINE: {s: "Import names expected from Kaggle's own image per profile."}
+stokastisk.dependencies.PROFILES: {s: "Profile names (core, structured-output, serving, models) mapped to their requirements."}
+stokastisk.dependencies.OPTIONAL_PROFILES: {s: "Profiles that are not installed by default (models)."}
+stokastisk.dependencies.missing_for: {s: "Import names that cannot be found for the given profiles.", p: {"*profiles": "Profile names, for example 'core', 'serving'."}, r: "list[str]"}
+
+stokastisk.diagnostics.NATIVE_EXTENSIONS: {s: "Names of the bundled native extensions imported by check_native_extensions."}
+stokastisk.diagnostics.discover_gpus: {s: "List the visible GPUs with name, compute capability and memory.", r: "list of dicts."}
+stokastisk.diagnostics.peer_access_matrix: {s: "CUDA peer-access result per ordered GPU pair.", r: "dict keyed like '0->1' with booleans."}
+stokastisk.diagnostics.FLASH_NATIVE_MODULES: {s: "Module names of Flash-family native libraries that must not be loaded."}
+stokastisk.diagnostics.PROHIBITED_DISTS: {s: "Distribution names of Flash-family packages that must not be installed."}
+stokastisk.diagnostics.PROHIBITED_MODULES: {s: "Importable Flash-family module names that must not be importable."}
+stokastisk.diagnostics.validate_environment: {p: {require_gpus: "Number of GPUs that must be present (default 2).", strict_torch: "Require the exact torch build the wheel targets."}, r: "dict report of the checks performed."}
+
+stokastisk.engine.LLM:
+  p: {model: "Hugging Face id or local path (non-empty string).", config: "StokastiskConfig; None uses StokastiskConfig.from_env().", "**kwargs": "Extra vLLM engine arguments; policy keys must repeat the enforced value."}
+  x: {ConfigurationError: "invalid model, strategy 'auto'/'replica_parallel', or a refused backend.", EngineError: "vLLM failed to start.", StokastiskCompatibilityError: "attention_backend or structured backend that differs from the enforced one."}
+  rel: [stokastisk.config.StokastiskConfig, stokastisk.parallel.replica.ReplicaPool]
+stokastisk.engine.LLM.selected_attention_backend: {s: "Name of the attention backend recorded in the live engine's configuration, or None."}
+stokastisk.engine.LLM.verify_attention_backend: {s: "Return the live attention backend name and raise unless it is TRITON_ATTN.", r: "'TRITON_ATTN'", x: {AttentionBackendError: "the engine is on another backend."}}
+stokastisk.engine.LLM.structured_output_backend: {s: "Structured-output backend recorded in the live engine configuration, or None."}
+stokastisk.engine.LLM.verify_structured_output_backend: {s: "Return the live structured-output backend and raise unless it is the pinned xgrammar.", r: "str", x: {StructuredOutputError: "a different backend is active."}}
+stokastisk.engine.LLM.engine: {s: "The underlying vLLM engine object (advanced use; bypasses the SDK's serialisation)."}
+stokastisk.engine.LLM.generate: {p: {prompts: "List of non-empty strings.", sampling_params: "vllm SamplingParams or None.", timeout: "Seconds before EngineTimeoutError; None waits.", "**kwargs": "Passed to vllm.LLM.generate."}, r: "list of vLLM RequestOutput.", x: {EngineClosedError: "after close().", EngineTimeoutError: "timeout expired (request keeps running).", TypeError: "prompts are not non-empty strings."}}
+stokastisk.engine.LLM.chat: {p: {messages: "List of {role, content} dicts or a list of such lists.", sampling_params: "vllm SamplingParams or None.", timeout: "Seconds.", "**kwargs": "Passed to vllm.LLM.chat."}, r: "list of vLLM RequestOutput.", x: {EngineClosedError: "after close().", EngineTimeoutError: "timeout expired."}}
+stokastisk.engine.LLM.complete: {p: {prompt: "Non-empty string.", max_tokens: "Tokens to generate.", temperature: "Sampling temperature.", timeout: "Seconds."}, r: "str generated text.", x: {ValueError: "empty or non-string prompt."}}
+stokastisk.engine.LLM.generate_structured: {p: {prompts: "List of non-empty strings.", schema: "JSON Schema dict or JSON string.", max_tokens: "Tokens to generate; truncated outputs are errors.", temperature: "Sampling temperature.", timeout: "Seconds."}, r: "list of parsed, schema-validated objects.", x: {StructuredOutputError: "invalid, truncated or non-conforming output or schema."}}
+stokastisk.engine.LLM.close: {x: {EngineCloseError: "the engine's own shutdown failed (cleanup still completed)."}, r: "None; idempotent."}
+stokastisk.engine.LLM.closed: {s: "True once close() has run or the engine failed to start."}
+
+stokastisk.limits.KaggleLimits: {s: "Frozen record of the Kaggle environment limits the SDK plans with.", p: {cpu_cores: "CPU cores (4).", system_ram_gib: "RAM in GiB (30).", working_dir: "Output directory (/kaggle/working).", working_dir_gib: "Output quota in GiB (20).", gpu_count: "GPUs (2).", gpu_name_contains: "Substring expected in the GPU name ('T4').", gpu_compute_capability: "(7, 5).", gpu_vram_gib: "Per-GPU memory in GiB (15)."}}
+stokastisk.limits.LIMITS: {s: "The KaggleLimits instance used by check_resources and cpu_budget."}
+stokastisk.limits.cpu_budget: {s: "CPU cores to plan with: the smaller of the Kaggle limit and the usable cores.", r: "int"}
+stokastisk.limits.system_ram_gib: {s: "Physical RAM in GiB, or None if it cannot be read.", r: "float | None"}
+stokastisk.limits.dir_size_bytes: {s: "Total size of regular files under a directory, in bytes.", p: {path: "Directory path."}, r: "int"}
+stokastisk.limits.cpu_thread_env: {s: "Thread-count environment variables (OMP/MKL/OPENBLAS/NUMEXPR) for the given TP size.", p: {tensor_parallel_size: "TP size."}, r: "dict[str, str]"}
+stokastisk.limits.working_dir_status: {p: {path: "Directory to measure; None uses the Kaggle working directory."}}
+
+stokastisk.nccl.SCHEMA_VERSION: {s: "Version of the self-test report schema."}
+stokastisk.nccl.run_collective_selftest: {p: {expected_world: "Number of ranks the job must have (2)."}, x: {RuntimeError: "internal launch error; failures of the test itself are reported in the result."}}
+
+stokastisk.parallel.memory.UNSUPPORTED_ARCH_MARKERS: {s: "Architecture markers the memory model refuses."}
+stokastisk.parallel.memory.CUDA_CONTEXT_OVERHEAD_MIB: {s: "Per-GPU CUDA context overhead (MiB) assumed by the estimates."}
+stokastisk.parallel.memory.ModelSpec: {s: "Model dimensions needed to estimate weight and KV-cache memory (read from a Hugging Face config.json).", p: {name: "Model name.", num_layers: "Transformer layers.", hidden_size: "Hidden size.", num_attention_heads: "Attention heads.", num_kv_heads: "Key/value heads.", intermediate_size: "MLP size.", vocab_size: "Vocabulary size.", head_dim: "Head dimension; None derives it.", tie_word_embeddings: "Whether embeddings are tied.", architecture: "Architecture name."}}
+stokastisk.parallel.memory.ModelSpec.head_dim_: {s: "Effective head dimension (head_dim or hidden_size / heads)."}
+stokastisk.parallel.memory.ModelSpec.params: {s: "Estimated parameter count."}
+stokastisk.parallel.memory.ModelSpec.weight_mib: {s: "Estimated weight memory in MiB."}
+stokastisk.parallel.memory.ModelSpec.kv_mib: {s: "Estimated KV-cache memory in MiB for a number of cached tokens.", p: {tokens: "Cached tokens."}}
+stokastisk.parallel.memory.ModelSpec.unsupported_reason: {s: "Why the architecture cannot run here, or None."}
+stokastisk.parallel.memory.ModelSpec.to_dict: {s: "Plain dict of the spec and derived estimates."}
+stokastisk.parallel.memory.ModelSpec.from_hf_config: {s: "Build a ModelSpec from a parsed config.json.", p: {name: "Model name.", cfg: "Parsed config.json dict.", "**kw": "Overrides."}, x: {ConfigurationError: "required keys are missing."}}
+stokastisk.parallel.memory.load_model_spec: {p: {model: "ModelSpec, local directory or Hub repo id.", local_files_only: "Do not contact the Hub."}}
+stokastisk.parallel.queue.Request: {s: "One queued generation request with a token-cost estimate.", status: internal}
+stokastisk.parallel.queue.RequestQueue: {s: "Bounded queue of Requests used by ReplicaPool.", p: {maxsize: "Maximum pending requests; None is unbounded."}, status: internal}
+stokastisk.parallel.queue.RequestQueue.put: {p: {r: "Request.", front: "Insert at the front (retries)."}, x: {OverflowError: "the queue is full."}, status: internal}
+stokastisk.parallel.queue.RequestQueue.get: {s: "Pop the next request or return None when empty.", status: internal}
+stokastisk.parallel.queue.RequestQueue.pending_tokens: {s: "Sum of the cost of queued requests.", status: internal}
+stokastisk.parallel.recommender.WORKLOADS: {s: "Valid workload hints for recommend_parallelism ('latency', 'throughput')."}
+stokastisk.parallel.recommender.Recommendation: {s: "Result of recommend_parallelism: a strategy with its TP/PP sizes, reason, warnings, alternatives and memory estimates.", p: {strategy: "single_gpu, tensor_parallel, pipeline_parallel, replica_parallel, insufficient_memory, unsupported_architecture or no_gpu.", tensor_parallel_size: "Recommended TP.", pipeline_parallel_size: "Recommended PP.", reason: "Plain-language reason.", warnings: "Caveats.", alternatives: "Other feasible layouts.", experimental: "True for experimental strategies.", estimates: "Memory estimates (MiB)."}}
+stokastisk.parallel.recommender.Recommendation.to_dict: {s: "Plain dict of the recommendation."}
+stokastisk.parallel.recommender.Recommendation.to_config: {p: {"**kw": "StokastiskConfig overrides, for example max_model_len."}, x: {ConfigurationError: "the strategy is not runnable."}}
+stokastisk.parallel.recommender.default_recommendation: {s: "Model-independent one-line summary stored in Topology.recommended_parallelism.", p: {topology: "A Topology."}}
+stokastisk.parallel.recommender.recommend_parallelism: {s: "Rule-based recommendation of a parallel layout for a model on the discovered GPUs. It only recommends; nothing is started.", p: {model: "Model id, path or ModelSpec.", topology: "Topology; None runs discover_topology().", workload: "'latency' or 'throughput'.", max_model_len: "Context length used for the KV estimate.", gpu_memory_utilization: "Fraction of each GPU usable.", min_concurrent_seqs: "Sequences that must fit in the KV cache."}, r: "Recommendation", x: {ConfigurationError: "unknown workload or unreadable model."}}
+stokastisk.parallel.replica.ReplicaPool: {s: "Two independent TP=1 engines, one per GPU, behind a token-aware scheduler. Each GPU holds the full weights.", p: {model: "Model id or path.", devices: "GPU indices, default (0, 1).", config: "TP=1/PP=1 config; None uses the defaults.", ready_timeout: "Seconds to wait for each worker.", max_attempts: "Attempts per request before failing.", engine_kwargs: "Extra vLLM arguments."}, x: {UnsupportedParallelismError: "config is not TP=1/PP=1."}}
+stokastisk.parallel.replica.ReplicaPool.generate: {p: {prompts: "List of prompts.", max_tokens: "Tokens per prompt.", temperature: "Sampling temperature.", timeout: "Seconds for the whole batch."}, r: "list[str] in prompt order."}
+stokastisk.parallel.routing.WorkerLoad: {s: "Load snapshot of one worker used for routing.", status: internal}
+stokastisk.parallel.routing.WorkerLoad.available: {s: "True when the worker is alive, ready and has enough free VRAM.", status: internal}
+stokastisk.parallel.routing.effective_speed: {status: internal}
+stokastisk.parallel.routing.projected_load: {status: internal}
+stokastisk.parallel.routing.choose_worker: {s: "Pick the available worker with the lowest projected load, or None.", p: {workers: "Worker load snapshots.", cost_tokens: "Estimated cost of the new request."}, status: internal}
+stokastisk.parallel.scheduler.Decision: {s: "Record of one scheduling decision.", status: internal}
+stokastisk.parallel.scheduler.Scheduler: {s: "Token-aware scheduler that places requests on workers and tracks observed speed.", p: {workers: "Worker load snapshots.", max_attempts: "Attempts per request.", speed_alpha: "Smoothing factor of the observed speed."}, status: internal}
+stokastisk.parallel.scheduler.Scheduler.assign: {s: "Place one request; returns the worker id or None.", status: internal}
+stokastisk.parallel.scheduler.Scheduler.complete: {s: "Record completion of a request and update the worker's observed speed.", status: internal}
+stokastisk.parallel.scheduler.Scheduler.revive: {s: "Mark a worker alive again.", status: internal}
+stokastisk.parallel.worker.gpu_identity: {status: internal}
+stokastisk.parallel.worker.worker_main: {s: "Entry point of a replica worker process.", status: internal}
+
+stokastisk.prohibited.STEM_RE: {s: "Regular expression of Flash-family module stems."}
+stokastisk.prohibited.EXACT_STEMS: {s: "Exact module stems treated as Flash-family."}
+stokastisk.prohibited.FA_PREFIX_RE: {s: "Regular expression of FlashAttention-prefixed names."}
+stokastisk.prohibited.ALLOWED_FLASH_NAMED: {s: "Names containing 'flash' that are not FlashAttention and are allowed."}
+stokastisk.prohibited.BINARY_SUFFIXES: {s: "File suffixes treated as native binaries."}
+stokastisk.prohibited.NATIVE_MARKERS: {s: "Byte markers that identify Flash-family code in native objects."}
+stokastisk.prohibited.BINDING_RE: {s: "Regular expression for Flash-family bindings."}
+stokastisk.prohibited.REFERENCE_RE: {s: "Regular expression for Flash-family references in source."}
+stokastisk.prohibited.BLOCKED_IMPORT_NAMES: {s: "Import names blocked at runtime."}
+stokastisk.prohibited.PROHIBITED_DISTS: {s: "Distribution names that must not be present."}
+stokastisk.prohibited.is_binary: {s: "True if the path has a native-binary suffix.", p: {path: "Path inside a wheel or tree."}}
+stokastisk.prohibited.scan_wheel: {s: "Scan a wheel file for Flash-family modules, files and native markers.", p: {path: "Wheel path."}, r: "dict report with a 'clean' flag."}
+stokastisk.prohibited.scan_tree: {s: "Scan an installed tree for Flash-family modules, files and native markers.", p: {root: "Directory."}, r: "dict report with a 'clean' flag."}
+
+stokastisk.serving.SERVER_REQUIREMENTS: {s: "Import names the OpenAI-compatible server needs."}
+stokastisk.serving.validate_host: {s: "Validate a host string.", p: {host: "Host or IP."}, x: {ConfigurationError: "empty or invalid host."}}
+stokastisk.serving.validate_port: {s: "Validate a TCP port.", p: {port: "Integer 1-65535."}, x: {ConfigurationError: "invalid port."}}
+stokastisk.serving.find_free_port: {s: "Return a free TCP port on the host.", p: {host: "Interface to bind."}, r: "int"}
+stokastisk.serving.build_serve_command: {s: "Return the exact argv of `vllm serve` for the SDK defaults. Pure function: nothing is started.", p: {model: "Model id or path.", config: "StokastiskConfig; None uses from_env().", host: "Bind host.", port: "TCP port.", served_model_name: "Name clients send.", quantization: "Quantization method; refused if it needs a newer GPU.", extra_args: "Extra vllm serve arguments.", python: "Interpreter path; None uses the current one."}, r: "list[str]"}
+stokastisk.serving.ServerProcess: {s: "Supervise one `vllm serve` child process (never started implicitly, never left running by `with`).", p: {model: "Model id or path.", config: "StokastiskConfig; None uses StokastiskConfig.from_env().", host: "Bind host, default 127.0.0.1.", port: "TCP port, default 8000.", served_model_name: "Name clients send; default the model.", quantization: "Quantization method.", extra_args: "Extra vllm serve arguments.", cuda_visible_devices: "Value of CUDA_VISIBLE_DEVICES for the child.", log_path: "Server log file; default a temporary file kept after stop().", python: "Interpreter path."}, x: {ConfigurationError: "invalid model, host, port or a replica_parallel config."}}
+stokastisk.serving.ServerProcess.base_url: {s: "The server URL, `http://` + host + `:` + port."}
+stokastisk.serving.ServerProcess.pid: {s: "Process id of the child, or None."}
+stokastisk.serving.ServerProcess.running: {s: "True while the child process is alive."}
+stokastisk.serving.ServerProcess.log_tail: {s: "Last lines of the server log.", p: {max_lines: "Number of lines."}}
+stokastisk.serving.ServerProcess.start: {s: "Start the child process (does not wait for readiness).", r: "self", x: {MissingDependencyError: "serving packages are missing.", ServerError: "already running or cannot spawn."}}
+stokastisk.serving.ServerProcess.start_and_wait: {s: "start() then wait_ready().", p: {timeout: "Seconds to wait."}, r: "self"}
+stokastisk.serving.ServerProcess.wait_ready: {p: {timeout: "Seconds to wait for HTTP 200 from /health.", interval: "Seconds between polls."}, x: {ServerStartupError: "the process exited or the timeout expired."}}
+stokastisk.serving.ServerProcess.restart: {p: {timeout: "Readiness timeout in seconds."}, r: "self"}
+stokastisk.serving.ServerProcess.stop: {p: {grace: "Seconds to wait after each signal."}, r: "Exit code or None.", x: {ServerShutdownError: "the process group could not be stopped cleanly."}}
+stokastisk.serving.chat: {p: {base_url: "Server base URL.", model: "Served model name.", messages: "List of {role, content} dicts.", max_tokens: "Maximum tokens.", temperature: "Sampling temperature.", timeout: "HTTP timeout seconds."}}
+stokastisk.serving.stream_chat: {p: {base_url: "Server base URL.", model: "Served model name.", messages: "Chat messages.", max_tokens: "Maximum tokens.", temperature: "Sampling temperature.", timeout: "HTTP timeout seconds."}}
+stokastisk.serving.list_models: {s: "Model ids from GET /v1/models.", p: {base_url: "Server base URL.", timeout: "HTTP timeout seconds."}}
+stokastisk.serving.fetch_metrics: {p: {base_url: "Server base URL.", timeout: "HTTP timeout seconds."}}
+
+stokastisk.structured.check_schema: {p: {schema: "JSON Schema dict or JSON string."}}
+stokastisk.structured.validate_json_output: {p: {text: "Model output text.", schema: "JSON Schema dict or string."}}
+stokastisk.structured.json_schema_params: {p: {schema: "JSON Schema.", max_tokens: "Tokens to generate.", temperature: "Sampling temperature."}, x: {ValueError: "invalid schema or sizes."}}
+
+stokastisk.telemetry.communication_profiler.SegmentTimer: {s: "Accumulates named timing segments, measured on the wall clock or with CUDA events."}
+stokastisk.telemetry.communication_profiler.SegmentTimer.wall: {s: "Context manager timing a named segment on the wall clock.", p: {name: "Segment name."}}
+stokastisk.telemetry.communication_profiler.SegmentTimer.totals: {s: "Total seconds per segment."}
+stokastisk.telemetry.communication_profiler.SegmentTimer.report: {s: "Totals and counts per segment as a dict."}
+stokastisk.telemetry.cuda_profiler.nsight_status: {s: "Report whether Nsight tooling is usable. Never required.", r: "dict"}
+stokastisk.telemetry.metrics.throughput: {s: "tokens / seconds, or None when seconds is not positive.", p: {tokens: "Token count.", seconds: "Elapsed seconds."}}
+stokastisk.telemetry.nvml.sample_once: {s: "One GPU sample per visible GPU (index, utilisation, memory, clocks, temperature, power). The implementation runs `nvidia-smi --query-gpu`; counters it reports as N/A are None. The module docstring mentions NVML first, but the sampling code path uses nvidia-smi.", r: "dict with t, source ('nvidia-smi' or 'unavailable') and gpus."}
+stokastisk.telemetry.nvml.GpuSampler.summary: {s: "min / median / p95 / max / mean per GPU and metric over all samples.", r: "dict with n_samples, source and per_gpu."}
+stokastisk.telemetry.report.write_json: {s: "Write obj as JSON and return the path.", p: {path: "Output file.", obj: "JSON-serialisable object."}}
+stokastisk.telemetry.worker_metrics.WorkerMetrics: {s: "Compute, communication-wait and queue-wait accounting of one worker.", p: {worker: "Label.", wall_s: "Wall seconds.", compute_s: "Compute seconds.", comm_wait_s: "Communication wait seconds.", queue_wait_s: "Queue waits per request.", requests: "Requests served.", output_tokens: "Tokens generated.", mem_used_mib: "GPU memory used.", gpu_util_pct_mean: "Mean GPU utilisation."}}
+stokastisk.telemetry.worker_metrics.WorkerMetrics.idle_s: {s: "Wall seconds not accounted for by compute or communication wait."}
+stokastisk.telemetry.worker_metrics.WorkerMetrics.to_dict: {s: "Plain dict including idle_s."}
+
+stokastisk.topology.discovery.discover_topology: {s: "Discover the GPU topology through torch, then NVML, nvidia-smi and sysfs (every layer optional). Values that cannot be measured stay None; nothing is hard-coded to Kaggle's PHB.", p: {with_recommendation: "Also fill Topology.recommended_parallelism."}, r: "Topology"}
+stokastisk.topology.gpu_capabilities.torch_devices: {s: "DeviceInfo per CUDA device as seen by torch.", status: internal}
+stokastisk.topology.gpu_capabilities.cuda_python_version: {s: "Installed cuda-python version or None.", status: internal}
+stokastisk.topology.models.LINK_CLASSES: {s: "Link classes: NVLINK, PIX, PXB, PHB, NODE, SYS, UNKNOWN."}
+stokastisk.topology.models.DeviceInfo: {s: "One GPU: index, name, UUID, compute capability, VRAM (MiB) and PCIe generation/width, plus the source of each value.", p: {index: "GPU index.", name: "Product name.", uuid: "GPU UUID.", compute_capability: "(major, minor).", total_vram_mib: "Total memory.", free_vram_mib: "Free memory.", used_vram_mib: "Used memory.", pci_bus_id: "PCI bus id.", pcie_gen_current: "Current PCIe generation.", pcie_gen_max: "Maximum PCIe generation.", pcie_width_current: "Current PCIe width.", pcie_width_max: "Maximum PCIe width.", sources: "Field -> torch, nvml, nvidia-smi or sysfs."}}
+stokastisk.topology.models.PeerAccess: {s: "CUDA peer access per ordered GPU pair measured with torch.cuda.can_device_access_peer.", p: {matrix: "matrix[src][dst] is True, False or None (unknown).", source: "How it was measured."}}
+stokastisk.topology.models.PeerAccess.can_access: {s: "Peer access from src to dst, or None.", p: {src: "Source GPU.", dst: "Destination GPU."}}
+stokastisk.topology.models.PeerAccess.all_pairs_available: {s: "True when every measured pair has access."}
+stokastisk.topology.models.PeerAccess.any_pair_available: {s: "True when at least one pair has access."}
+stokastisk.topology.models.Topology: {s: "Discovered hardware facts: devices, peer access, link classes, NCCL and CUDA versions, CPU and RAM, notes and a model-independent recommendation. Unmeasured values are None."}
+stokastisk.topology.models.Topology.gpu_count: {s: "Number of devices."}
+stokastisk.topology.models.Topology.pair_link: {s: "Link class of a GPU pair (one of LINK_CLASSES).", p: {a: "First GPU.", b: "Second GPU."}}
+stokastisk.topology.models.Topology.to_dict: {s: "Plain dict of every field."}
+stokastisk.topology.nvml.smi_topo_matrix: {s: "Raw text of `nvidia-smi topo -m`, or None.", status: internal}
+stokastisk.topology.pcie.SYSFS_PCI: {s: "sysfs root used to read PCIe link data."}
+stokastisk.topology.pcie.classify_cell: {s: "Map one `nvidia-smi topo -m` cell (NV#, PIX, PXB, PHB, NODE, SYS, X) to a link class.", p: {cell: "Cell text."}}
+stokastisk.topology.pcie.pcie_sysfs: {p: {pci_bus_id: "PCI bus id or None."}}
+stokastisk.topology.peer_access.measure_peer_access: {s: "Measure CUDA peer access in both directions for every GPU pair. Never forced, never assumed.", p: {device_count: "Devices to test; None uses torch's count."}, r: "PeerAccess"}

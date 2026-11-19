@@ -10,9 +10,9 @@ Telemetry and benchmarks are research tools, not throughput promises. On two PCI
 
 | Name | Purpose |
 |---|---|
-| `nvml.sample_once()` | one GPU sample: NVML if present, else `nvidia-smi`, else "unavailable" |
+| `nvml.sample_once()` | one GPU sample per GPU (utilisation, memory, clocks, temperature, power) taken by running `nvidia-smi --query-gpu`; `source` is `"nvidia-smi"` or `"unavailable"`; counters reported as N/A are `None`. The module docstring says NVML is tried first, but the sampling code path uses `nvidia-smi` only |
 | `nvml.GpuSampler(interval=0.5)` | background sampler: `with GpuSampler() as s: ...; s.summary()` |
-| `nvml.pcie_throughput_kib_s` | PCIe throughput reading when NVML provides it |
+| `nvml.pcie_throughput_kib_s` | PCIe RX/TX in KiB/s per GPU via NVML (`pynvml`), or `None` when NVML or the counter is unavailable |
 | `metrics.percentile`, `summarize`, `throughput`, `imbalance_percent`, `token_latencies` | pure statistics |
 | `communication_profiler.SegmentTimer` | `wall(name)` and `cuda(name)` context managers, `totals()`, `report()` |
 | `worker_metrics.WorkerMetrics`, `balance_report` | compute versus communication versus idle time per worker |
@@ -46,3 +46,15 @@ Identical workloads for every strategy; all runs are recorded (median, p95, min,
 Call benchmark code from a `__main__`-guarded script, because vLLM spawns processes.
 
 Next: [Diagnostics and compatibility](diagnostics-compatibility.qmd).
+
+## GPU and LLM observability: what exists
+
+| Need | Tool | Evidence |
+|---|---|---|
+| GPU utilisation, memory, clocks, temperature, power over time | `GpuSampler`, `sample_once` (nvidia-smi) | Kaggle-tested in earlier notebooks (09, 11, 14) |
+| PCIe traffic | `pcie_throughput_kib_s` (NVML) | counter availability varies; `None` when missing |
+| LLM server metrics | `serving.fetch_metrics(base_url)` parses the server's Prometheus `/metrics` | `vllm:` sample presence checked in notebook 15; values not asserted |
+| Per-request latency | `metrics.token_latencies`, `metrics.summarize` | pure functions, CPU-tested |
+| Compute, communication and idle time per worker | `SegmentTimer`, `WorkerMetrics`, `balance_report` | CPU-tested; replica records feed `benchmarks.gpu_balance` |
+| Nsight | `nsight_status()` | availability probe only |
+| OpenTelemetry exporters | not supported (protobuf conflict) | `report.span` is a no-op unless OpenTelemetry is installed and configured |

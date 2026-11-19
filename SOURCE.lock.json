@@ -19,5 +19,6 @@
   "install": "standalone (~/.local/opt/quarto-1.11.9 locally, quarto-dev/quarto-actions/setup in CI)"
  },
  "python": "3.13",
- "canonical_url": "https://stokastisk-ai.github.io/stokastisk-docs/"
+ "canonical_url": "https://stokastisk-ai.github.io/",
+ "docs_repository": "stokastisk-ai/stokastisk-ai.github.io (renamed from stokastisk-docs, 2026-11-20; rollback commit cb77c33)"
 }

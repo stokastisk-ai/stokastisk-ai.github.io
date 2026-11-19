@@ -129,6 +129,7 @@ def main() -> None:
              "It lists every public name, including members that have no docstring and therefore have no page in the "
              "[API reference](../reference/index.html)."), encoding="utf-8")
     (out / "STAGED_FROM.json").write_text(json.dumps({"sdk_repository": SDK_URL, "commit": rev}, indent=1) + "\n")
+    subprocess.run([sys.executable, str(ROOT / "scripts" / "gen_api_details.py"), str(out)], check=True)
     print(f"staged SDK {rev} -> {out}")
 
 

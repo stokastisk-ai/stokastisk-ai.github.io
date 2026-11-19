@@ -23,7 +23,7 @@ Leaving the `with` block stops the server. It is never started implicitly or lef
 | Argument | Default | Meaning |
 |---|---|---|
 | `model` | none | model id or path |
-| `config` | `StokastiskConfig()` | T4 defaults; `replica_parallel` is refused |
+| `config` | `StokastiskConfig.from_env()` | T4 defaults (environment variables apply); `replica_parallel` is refused |
 | `host`, `port` | `127.0.0.1`, `8000` | `find_free_port()` returns a free port |
 | `served_model_name` | `model` | the name clients send |
 | `quantization` | `None` | refused if the method needs a GPU newer than SM75 |

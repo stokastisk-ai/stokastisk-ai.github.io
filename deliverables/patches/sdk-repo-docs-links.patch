@@ -4,7 +4,7 @@
  GUIDE = ROOT / "docs/guide"
  SDK = ROOT / "sdk/stokastisk"
  BASE = "https://github.com/stokastisk-ai/stokastisk"
-+NEW_SITE = "https://stokastisk-ai.github.io/stokastisk-docs/"       # the single canonical documentation site (Great Docs)
++NEW_SITE = "https://stokastisk-ai.github.io/"       # the single canonical documentation site (Great Docs)
 +CANONICAL = {"index": "", "getting-started": "user-guide/installation.html", "configuration": "user-guide/configuration.html", "engine": "user-guide/engine.html",
 +             "structured-output": "user-guide/structured-output.html", "server": "user-guide/openai-server.html", "multi-gpu": "user-guide/parallelism.html",
 +             "diagnostics": "user-guide/diagnostics-compatibility.html", "feature-matrix": "user-guide/feature-matrix.html", "errors": "user-guide/errors-troubleshooting.html",
@@ -28,7 +28,7 @@
  | Structured output | xgrammar 0.2.3, pinned (never `auto`); every output validated against its schema |
  
 +## Documentation
-+Full documentation, generated API reference and release evidence: **<https://stokastisk-ai.github.io/stokastisk-docs/>**.
++Full documentation, generated API reference and release evidence: **<https://stokastisk-ai.github.io/>**.
 +
  ## User guide (Kaggle)
  **1. Notebook settings:** Accelerator **GPU T4 × 2**, **Internet ON**, a Python 3.13 image.
@@ -40,7 +40,7 @@
  # Stokastisk 0.1.0 — vLLM 0.25.1 + Triton attention + CUDA binaries for Kaggle's 2 × Tesla T4
  
 -This repository is the **CDN for the Stokastisk wheel** (SDK + bundled vLLM 0.25.1 + CUDA 13.0 `sm_75` binaries, no FlashAttention/FlashInfer/FlashMLA). Source, docs and tests: <https://github.com/stokastisk-ai/stokastisk> · User guide: <https://stokastisk-ai.github.io/stokastisk/docs/>
-+This repository is the **CDN for the Stokastisk wheel** (SDK + bundled vLLM 0.25.1 + CUDA 13.0 `sm_75` binaries, no FlashAttention/FlashInfer/FlashMLA). Source, docs and tests: <https://github.com/stokastisk-ai/stokastisk> · Documentation and API reference: <https://stokastisk-ai.github.io/stokastisk-docs/> (earlier user guide: <https://stokastisk-ai.github.io/stokastisk/docs/>)
++This repository is the **CDN for the Stokastisk wheel** (SDK + bundled vLLM 0.25.1 + CUDA 13.0 `sm_75` binaries, no FlashAttention/FlashInfer/FlashMLA). Source, docs and tests: <https://github.com/stokastisk-ai/stokastisk> · Documentation and API reference: <https://stokastisk-ai.github.io/> (earlier user guide: <https://stokastisk-ai.github.io/stokastisk/docs/>)
  
  ## Install (one line, Kaggle: GPU T4 × 2, Internet ON, Python 3.13)
  ```bash

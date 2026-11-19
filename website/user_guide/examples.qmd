@@ -1,0 +1,102 @@
+---
+title: "Complete examples for Kaggle dual T4"
+description: "Complete, copy-ready Stokastisk examples for Kaggle: engine, structured output, OpenAI-compatible server, tensor and pipeline parallelism, replicas, diagnostics and telemetry, with their evidence status."
+guide-section: "Evidence and limits"
+---
+
+Every example below uses only objects documented on this site. **Evidence status:** *executed* means the same pattern ran in a recorded Kaggle notebook on build 3; *static-checked* means it parses and every name resolves in the source, but it was not executed for this documentation. Nothing here reports a measured result.
+
+## 1. Environment check (static-checked)
+
+```python
+import json
+import stokastisk
+
+print(stokastisk.__version__, stokastisk.VLLM_BASE_VERSION, stokastisk.CUDA_BUILD_TARGET)
+print(json.dumps(stokastisk.report(), indent=1, default=str))
+print(stokastisk.check_resources())
+assert stokastisk.prohibited_report()["clean"]
+```
+
+## 2. One GPU: completion, chat, structured JSON (pattern executed in notebooks 16 and 18)
+
+```python
+from stokastisk import LLM, StokastiskConfig
+
+schema = {"type": "object", "required": ["city", "population"], "additionalProperties": False,
+          "properties": {"city": {"type": "string", "maxLength": 40},
+                         "population": {"type": "integer", "minimum": 0, "maximum": 100000000}}}
+
+with LLM("Qwen/Qwen2.5-0.5B-Instruct", config=StokastiskConfig(max_model_len=2048)) as llm:
+    print(llm.verify_attention_backend())
+    print(llm.complete("The capital of France is", max_tokens=16))
+    print(llm.chat([{"role": "user", "content": "Say hello in five words."}])[0].outputs[0].text)
+    print(llm.generate_structured(["Describe Paris."], schema, max_tokens=96))
+```
+
+## 3. Choose a layout, then run (recommender: static-checked; TP=2 and PP=2 executed in notebooks 18 and 19)
+
+```python
+import stokastisk
+from stokastisk import LLM
+
+model = "Qwen/Qwen2.5-Coder-7B-Instruct"
+print(stokastisk.check_model(model, mode="TP=2")["status"])
+rec = stokastisk.recommend_parallelism(model, workload="latency", max_model_len=2048)
+print(rec.strategy, rec.reason, rec.warnings)
+with LLM(model, config=rec.to_config(max_model_len=2048)) as llm:
+    print(llm.chat([{"role": "user", "content": "Write a Python function that parses JSON Lines."}])[0].outputs[0].text)
+```
+
+`to_config` raises `ConfigurationError` when the recommendation is not runnable (for example `insufficient_memory`).
+
+## 4. Independent replicas (executed in the notebook 15 parallel stage with Qwen2.5-0.5B)
+
+```python
+from stokastisk import ReplicaPool, StokastiskConfig
+
+pool = ReplicaPool("Qwen/Qwen2.5-0.5B-Instruct", devices=[0, 1], config=StokastiskConfig(max_model_len=2048))
+try:
+    print(pool.generate(["Hello", "Bonjour", "Hola", "Ciao"], max_tokens=16))
+    print(pool.last_stats)
+finally:
+    print(pool.close())
+```
+
+## 5. OpenAI-compatible server with streaming and metrics (executed in notebook 15 server stage, TP=1)
+
+```python
+from stokastisk import serving
+
+with serving.ServerProcess("Qwen/Qwen2.5-0.5B-Instruct", port=serving.find_free_port()) as srv:
+    srv.wait_ready()
+    msgs = [{"role": "user", "content": "Count to five."}]
+    print(serving.list_models(srv.base_url))
+    print(serving.chat(srv.base_url, srv.served_model_name, msgs))
+    print("".join(serving.stream_chat(srv.base_url, srv.served_model_name, msgs)))
+    print(list(serving.fetch_metrics(srv.base_url))[:5])
+```
+
+## 6. GPU sampling around a workload (static-checked)
+
+```python
+from stokastisk.telemetry.nvml import GpuSampler
+from stokastisk.cuda.memory import mem_info
+
+with GpuSampler(1.0) as sampler:
+    ...   # run an engine call here
+print(sampler.summary()["per_gpu"])
+print(mem_info(0), mem_info(1))
+```
+
+## 7. Topology and peer access (static-checked; recorded as PHB on Kaggle in earlier notebooks)
+
+```python
+import stokastisk
+
+topo = stokastisk.discover_topology()
+print(topo.gpu_count, topo.pair_link(0, 1), topo.peer_access.all_pairs_available)
+print(topo.to_dict()["notes"])
+```
+
+Script form: put engine code under `if __name__ == "__main__":`. The ready-made notebooks are described in [Kaggle notebooks and evidence](kaggle-examples.qmd).

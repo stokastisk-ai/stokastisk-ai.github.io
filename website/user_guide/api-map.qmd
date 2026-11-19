@@ -1,0 +1,35 @@
+---
+title: "API map: public, internal and upstream"
+description: "Which Stokastisk names are the supported public API, which are internal implementation details, and which belong to upstream vLLM, including SamplingParams and the package version attribute."
+guide-section: "API details"
+---
+
+The supported API is what `import stokastisk` exports (`stokastisk.__all__`) plus the documented submodule functions. Three kinds of names exist; the [API details](api-engine-config.qmd) pages label every object.
+
+| Kind | Meaning | Examples |
+|---|---|---|
+| **Public API** | exported at the top level or documented in the guide; supported | `LLM`, `StokastiskConfig`, `ReplicaPool`, `serving.ServerProcess`, `check_model`, the exceptions |
+| **Public by naming, internal by purpose** | importable without a leading underscore but written for the SDK's own modules or worker processes; may change | `parallel.routing.choose_worker`, `parallel.scheduler.Scheduler`, `parallel.worker.worker_main`, `topology.nvml.*`, `prohibited` regular expressions |
+| **Upstream vLLM** | comes from the bundled vLLM 0.25.1; documented by vLLM, not here | `SamplingParams`, the objects returned by `generate` and `chat`, `vllm serve` flags |
+
+## `SamplingParams` (upstream)
+
+`stokastisk.SamplingParams` is a **lazy re-export** of `vllm.SamplingParams` from the bundled vLLM 0.25.1: `import stokastisk` does not import vLLM, and the first access of the name does. Stokastisk adds no fields or behaviour. Use it for `LLM.generate(prompts, sampling_params)` and `LLM.chat(...)`; its parameters (temperature, top_p, max_tokens, ...) are documented in the [vLLM sampling parameters reference](https://docs.vllm.ai/en/stable/api/vllm/sampling_params/). `structured.json_schema_params(schema, ...)` returns a `SamplingParams` constrained to a JSON schema. Run results: the SDK only recorded greedy (temperature 0) output for its assertions; see the [Feature matrix](feature-matrix.qmd).
+
+The other lazy exports (`ReplicaPool`, `ServerProcess`, `build_serve_command`, `find_free_port`) are Stokastisk's own objects, imported on first access to keep `import stokastisk` light.
+
+## Version attributes
+
+| Name | Value and meaning |
+|---|---|
+| `stokastisk.__version__` | the project version string, `0.1.0` for every build. It is the literal `"0.1.0"` in `sdk/stokastisk/_version.py`, kept equal to the `VERSION` file (the declared single source) by `scripts/release/verify_project_version.py` and the tests under `VERSION_POLICY.md`; it is not the wheel build tag. The build tag (currently 5) appears only in the wheel file name |
+| `stokastisk.VLLM_BASE_VERSION` | `0.25.1`, the bundled vLLM version |
+| `stokastisk.CUDA_BUILD_TARGET` | the CUDA toolkit the natives target (13.0) |
+| `stokastisk.GPU_COMPUTE_CAPABILITY` | the tuple `(7, 5)`: compute capability SM75 |
+| `stokastisk.validate_kaggle_t4` | alias of `validate_environment` |
+
+Check the wheel's own version with `importlib.metadata.version("stokastisk")` and the bundled vLLM with `importlib.metadata.version("vllm")`.
+
+## Source docstring gaps
+
+The released SDK source has no docstring on many public objects (for example `StokastiskConfig`, `Topology`, `Recommendation`, `LIMITS`). Changing them would change the published wheel, so this site documents them in `website/api-notes.yml` and marks each section's origin (*source docstring*, *site note* or *signature only*). The coverage numbers are in the repository's `reports/api-coverage.md`.

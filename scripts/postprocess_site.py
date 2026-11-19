@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import html
+from html import parser as html_parser
 import json
 import re
 import shutil
@@ -31,6 +32,78 @@ def kinds(inv: Path) -> dict[str, str]:
         if m:
             out[m.group(3)] = m.group(2)          # location -> role
     return out
+
+
+class _Ids(html_parser.HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.ids = set()
+
+    def handle_starttag(self, tag, attrs):
+        for k, v in attrs:
+            if k in ("id", "name") and v:
+                self.ids.add(v)
+
+
+def fix_headings_and_anchors(site: Path) -> dict:
+    """Deterministic repairs of Great Docs template output: one <h1> per page; no link fragments that point at ids the target page lacks."""
+    pages = [p for p in site.rglob("*.html") if "site_libs" not in p.parts]
+    texts = {p: p.read_text(encoding="utf-8") for p in pages}
+    ids = {}
+    for p, t in texts.items():
+        q = _Ids(); q.feed(t); ids[p] = q.ids
+    h1_pages = anchors = 0
+    for p, t in texts.items():
+        new = t
+        n = {"open": 0}
+
+        def h1(m):
+            if m.group(1) == "":
+                n["open"] += 1
+                return m.group(0) if n["open"] == 1 else m.group(0).replace("<h1", "<h2", 1)
+            return m.group(0) if n["open"] <= 1 else "</h2>"
+        new = re.sub(r"<(/?)h1\b[^>]*>", h1, new)
+        if n["open"] > 1:
+            h1_pages += 1
+
+        def link(m):
+            nonlocal anchors
+            href = m.group(2)
+            if "#" not in href or re.match(r"^(https?:|mailto:|#)", href):
+                return m.group(0)
+            base, frag = href.split("#", 1)
+            tgt = (p.parent / base).resolve() if base else p
+            if tgt in ids and frag and frag not in ids[tgt] and not frag.startswith(("tab-", "section-", "fn", "ref-", "cb")):
+                anchors += 1
+                return f'{m.group(1)}{base or ""}{m.group(3)}' if base else m.group(0)
+            return m.group(0)
+        new = re.sub(r'(<a [^>]*?href=")([^"]*)(")', link, new)
+        if new != t:
+            p.write_text(new, encoding="utf-8")
+    return {"h1_pages": h1_pages, "anchors": anchors}
+
+
+def write_legacy_redirects(site: Path, cfg: str) -> int:
+    """The project site used to live under /stokastisk-docs/. Write one tiny HTML redirect per page there (GitHub Pages cannot send 301s):
+    canonical to the root URL, immediate meta refresh and a visible link. Not listed in the sitemap. Never touches /stokastisk/ (the SDK's project site)."""
+    m = re.search(r"site_url:\s*(\S+)", cfg)
+    base = m.group(1).rstrip("/") + "/"
+    assert not (site / "stokastisk").exists(), "root site must not contain a /stokastisk/ namespace"
+    n = 0
+    for p in sorted(site.rglob("*.html")):
+        rel = p.relative_to(site).as_posix()
+        if "site_libs" in p.parts or rel in ("404.html",) or rel.startswith(("stokastisk-docs/", ".well-known/")):
+            continue
+        target = base + ("" if rel == "index.html" else rel)
+        out = site / "stokastisk-docs" / rel
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(f'<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Moved: Stokastisk documentation</title>'
+                       f'<link rel="canonical" href="{target}"><meta http-equiv="refresh" content="0; url={target}">'
+                       f'<meta name="viewport" content="width=device-width,initial-scale=1"></head>'
+                       f'<body><p>This page moved to <a href="{target}">{target}</a>.</p></body></html>\n', encoding="utf-8")
+        n += 1
+    idx = site / "stokastisk-docs" / "index.html"
+    return n
 
 
 def main() -> None:
@@ -95,6 +168,9 @@ def main() -> None:
         text = re.sub(r'<script type="application/ld\+json">.*?</script>', ld, text, flags=re.S)
         page.write_text(text, encoding="utf-8")
         changed += 1
+    repaired = fix_headings_and_anchors(site)
+    redirects = write_legacy_redirects(site, cfg)
+    print(f"h1 demoted on {repaired['h1_pages']} pages; {repaired['anchors']} dangling fragments removed; {redirects} legacy redirect pages written")
     print(f"og-image published: {(site / 'og-image.png').is_file()}; descriptions made unique on {changed} pages")
 
 

@@ -8,7 +8,7 @@ Proposed (after the new site is live and verified):
 
 ```bash
 # website field: the single canonical documentation URL
-gh repo edit stokastisk-ai/stokastisk --homepage "https://stokastisk-ai.github.io/stokastisk-docs/"
+gh repo edit stokastisk-ai/stokastisk --homepage "https://stokastisk-ai.github.io/"
 # About text: plain, factual, includes the exact brand and the supported hardware (<=350 chars)
 gh repo edit stokastisk-ai/stokastisk --description "Independent open-source Python 3.13 SDK: bundled vLLM 0.25.1 with Triton attention (SM75, CUDA 13.0) for Kaggle's dual Tesla T4 GPUs. TP, PP and replicas, structured output, OpenAI-compatible server."
 # topics: add accurate ones only
@@ -27,7 +27,7 @@ Adding `Documentation`/`Source` URLs would change wheel `METADATA` and therefore
 
 ## Hugging Face model card `waqasm86/stokastisk`
 
-Keep the YAML front matter and the current wheel URL. The patch changes only the link sentence in `docs/HUB_README.md` (the card's source) to "Documentation and API reference: https://stokastisk-ai.github.io/stokastisk-docs/". Uploading the card to Hugging Face is a separate approval step; do not upload the wheel again.
+Keep the YAML front matter and the current wheel URL. The patch changes only the link sentence in `docs/HUB_README.md` (the card's source) to "Documentation and API reference: https://stokastisk-ai.github.io/". Uploading the card to Hugging Face is a separate approval step; do not upload the wheel again.
 
 Optional front-matter additions (valid model-card fields): none required. Existing tags (`vllm, kaggle, tesla-t4, sm75, cuda-13, triton, inference, python-3.13`) already describe the project.
 

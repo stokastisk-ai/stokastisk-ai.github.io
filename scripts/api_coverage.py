@@ -21,6 +21,9 @@ import sys
 import zlib
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from api_model import build_model, classify, load_notes  # noqa: E402
+
 ROOT = Path(__file__).resolve().parent.parent
 
 # Public names that are data tables or regular expressions rather than callable API. They have no
@@ -201,9 +204,9 @@ def main():
     all_rows = []
     for e in exports:
         if e in UPSTREAM:
-            all_rows.append((e, "upstream", UPSTREAM[e]))
+            all_rows.append((e, "upstream", UPSTREAM[e] + "; explained in user-guide/api-map.html"))
         elif e == "__version__":
-            all_rows.append((e, "omitted", "package version string; value is on the homepage and the install page"))
+            all_rows.append((e, "documented", "hand-written: user-guide/api-map.html#version-attributes and api-engine-config (stokastisk._version)"))
         else:
             d = origin.get(e, "stokastisk")
             full = f"{d}.{e}"
@@ -225,9 +228,12 @@ def main():
     # hand-written pages cite only real symbols
     guide = list((st / "website" / "user_guide").glob("*.qmd")) + [st / "website" / "index.qmd"]
     bad_cites = []
+    model_keys = set(build_model(pkg))
     for f, syms in cited_symbols([g for g in guide if g.exists()]).items():
         for s in sorted(syms):
-            if not resolve(s, inv, methods, modules, set(exports), origin):
+            parts_ = s.split('.')
+            lazy_ok = len(parts_) >= 3 and any(k.startswith('.'.join(parts_[:-1]) + '.') or (k.rsplit('.', 1)[1] == parts_[-1] and k.rsplit('.', 1)[0].startswith('.'.join(parts_[:-1]))) for k in model_keys)
+            if s not in model_keys and not lazy_ok and not resolve(s, inv, methods, modules, set(exports), origin):
                 parts = s.split(".")
                 # allow attribute chains on documented classes/functions and bare module attributes; flag unknown first segments
                 tail_ok = len(parts) > 1 and ((".".join(parts[:2]) in modules) or parts[1] in exports or parts[1] in {m.split(".")[1] for m in modules if "." in m})
@@ -236,6 +242,25 @@ def main():
                 elif len(parts) >= 3 and ".".join(parts[:2]) in modules and f"{'.'.join(parts[:2])}.{parts[2]}" not in inv and ".".join(parts[:3]) not in modules:
                     bad_cites.append((f, s))
 
+    # --- documentation depth: complete vs partial vs index-only, per object (detail pages + site notes) ---
+    model = build_model(pkg)
+    notes = load_notes(st / "website" / "api-notes.yml")
+    detail_ids = set()
+    for pg in (st / "website" / "_site" / "user-guide").glob("api-*.html"):
+        detail_ids |= set(re.findall(r'id="([^"]+)"', pg.read_text(encoding="utf-8")))
+    depth = {"complete": [], "partial": [], "internal": [], "no_detail_section": []}
+    by_kind = {}
+    for k, e in model.items():
+        if e["kind"] == "module":
+            continue
+        cls, miss = classify(e, notes.get(k))
+        if k not in detail_ids:
+            depth["no_detail_section"].append(k)
+        depth[cls].append(k if not miss else f"{k} [{', '.join(miss)}]")
+        by_kind.setdefault(e["kind"], {}).setdefault(cls, 0)
+        by_kind[e["kind"]][cls] += 1
+    bad_src = [k for k, e in model.items() if e["kind"] != "module" and not ((st / e["file"]).is_file() and e["line"] <= len((st / e["file"]).read_text(encoding="utf-8").splitlines()))]
+    stale_notes = sorted(n for n in notes if n not in model)
     gaps = [n for n, s in status.items() if s == "GAP"] + [e for e, s, _ in all_rows if s == "GAP"]
     summary = {
         "public_module_level_names": len(inv),
@@ -252,13 +277,23 @@ def main():
         "missing_from_sdk_module_index": sorted(idx_gaps),
         "guide_citations_that_do_not_resolve": sorted(set(bad_cites)),
         "reference_objects_in_inventory": len(documented),
+        "depth_total_objects": sum(len(v) for k, v in depth.items() if k != "no_detail_section"),
+        "depth_complete": len(depth["complete"]),
+        "depth_partial": depth["partial"],
+        "depth_internal_justified": len(depth["internal"]),
+        "depth_without_detail_section": depth["no_detail_section"],
+        "depth_by_kind": by_kind,
+        "stale_site_notes": stale_notes,
+        "source_links_invalid": bad_src,
+        "baseline_2026_11_19": {"public_module_level_names": 203, "own_great_docs_page": 137, "module_index_only": 26, "omitted_data_tables": 36, "omitted_internal_helpers": 4,
+                                 "top_level_exports_documented": "49 of 51", "class_methods_documented": 18, "class_methods_index_only": 29},
     }
     (rep / "api-coverage.json").write_text(json.dumps(summary, indent=1) + "\n")
     lines = ["# API coverage report", "",
              "Static analysis of `sdk/stokastisk` (AST) against the built site's `objects.inv` and the SDK's own generated `docs/guide/api-reference.md`.", "",
              "| Measure | Result |", "|---|---|"]
     for k, v in summary.items():
-        if k in ("gaps", "missing_from_sdk_module_index", "guide_citations_that_do_not_resolve", "all_exports_upstream_or_omitted", "all_exports_module_index_only"):
+        if k in ("depth_partial", "source_links_invalid", "depth_without_detail_section", "stale_site_notes", "gaps", "missing_from_sdk_module_index", "guide_citations_that_do_not_resolve", "all_exports_upstream_or_omitted", "all_exports_module_index_only"):
             lines.append(f"| {k} | {len(v)} {('→ ' + ', '.join(map(str, v))) if v else ''} |")
         else:
             lines.append(f"| {k} | {v} |")
@@ -266,7 +301,7 @@ def main():
     lines += [f"| `{e}` | {s} | `{d}` |" for e, s, d in all_rows]
     (rep / "api-coverage.md").write_text("\n".join(lines) + "\n")
     print("\n".join(lines[4:20]))
-    sys.exit(1 if (gaps or idx_gaps or bad_cites) else 0)
+    sys.exit(1 if (gaps or idx_gaps or bad_cites or bad_src or depth['partial'] or depth['no_detail_section'] or stale_notes) else 0)
 
 
 if __name__ == "__main__":

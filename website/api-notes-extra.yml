@@ -1,0 +1,39 @@
+# Additions to api-notes.yml (merged by scripts/api_model.load_notes).
+stokastisk.benchmarks.pipeline_parallel.config_for: {p: {kw: "StokastiskConfig field overrides applied on top of pipeline_parallel_size=2."}}
+stokastisk.benchmarks.pipeline_parallel.run: {r: "dict of benchmark records per workload."}
+stokastisk.benchmarks.tensor_parallel.run: {r: "dict of benchmark records per workload."}
+stokastisk.communication.nccl.time_p2p: {p: {iters: "Timed iterations.", warmup: "Warm-up iterations."}}
+stokastisk.compat.uses_removed_backend: {p: {module_file: "Path of a vLLM model module.", root: "Root of the vllm package."}}
+stokastisk.compat.find_missing_imports: {p: {root: "Root of the vllm package.", max_depth: "Maximum import-chain depth followed."}}
+stokastisk.cuda.device.on_device: {r: "Context manager (generator)."}
+stokastisk.cuda.events.new_event: {r: "torch.cuda.Event"}
+stokastisk.cuda.events.record: {r: "The same event, after recording."}
+stokastisk.cuda.memory.pinned_empty: {r: "torch.uint8 tensor in pinned host memory."}
+stokastisk.cuda.streams.create_stream: {r: "torch.cuda.Stream"}
+stokastisk.errors.MissingDependencyError: {p: {hint: "Extra remedy text appended to the message."}}
+stokastisk.errors.ServerStartupError: {p: {reason: "Why start-up failed."}}
+stokastisk.errors.ServerHTTPError: {p: {message: "Error description."}}
+stokastisk.limits.threads_per_worker: {p: {tensor_parallel_size: "TP size (number of worker processes)."}, r: "int"}
+stokastisk.parallel.memory.ModelSpec: {p: {bytes_per_param: "Bytes per weight element (2 for FP16).", kv_bytes_per_elem: "Bytes per KV-cache element.", param_count_override: "Use this parameter count instead of the estimate."}}
+stokastisk.parallel.queue.estimate_tokens: {s: "Deterministic input-token estimate of about 4 characters per token.", p: {text: "Prompt text."}}
+stokastisk.parallel.recommender.Recommendation.to_config: {r: "StokastiskConfig"}
+stokastisk.parallel.replica.ReplicaPool.restart_dead: {p: {timeout: "Seconds to wait for each restarted worker."}}
+stokastisk.parallel.replica.ReplicaPool.generate: {s: "Generate text for a list of prompts across the replicas and return the texts in prompt order. Records timing and per-GPU busy time in last_stats."}
+stokastisk.parallel.replica.ReplicaPool.close: {p: {timeout: "Seconds to wait for each worker to exit."}}
+stokastisk.parallel.scheduler.Scheduler.assign_batch: {p: {reqs: "Requests to place.", longest_first: "Place the most expensive first (LPT)."}}
+stokastisk.parallel.scheduler.Scheduler.mark_dead: {p: {worker_id: "Worker that died."}}
+stokastisk.prohibited.native_markers: {p: {data: "Bytes of a native object."}}
+stokastisk.prohibited.scan_members: {p: {names: "Member names to scan."}}
+stokastisk.serving.validate_model_id: {p: {model: "Candidate model id or path."}}
+stokastisk.serving.ServerProcess.health: {p: {timeout: "HTTP timeout in seconds."}}
+stokastisk.structured.json_schema_params: {r: "vllm SamplingParams constrained to the schema (the bundled vLLM class)."}
+stokastisk.telemetry.communication_profiler.SegmentTimer.wall: {r: "Context manager."}
+stokastisk.telemetry.communication_profiler.SegmentTimer.cuda: {p: {name: "Segment name.", stream: "Stream to time on."}, r: "Context manager."}
+stokastisk.telemetry.metrics.percentile: {p: {values: "Numbers.", q: "Percentile in [0, 100]."}}
+stokastisk.telemetry.metrics.summarize: {p: {values: "Numbers (all runs)."}}
+stokastisk.telemetry.metrics.imbalance_percent: {p: {t0: "Time of worker 0.", t1: "Time of worker 1."}}
+stokastisk.telemetry.metrics.token_latencies: {p: {first_token_s: "Seconds to first token or None.", total_s: "Total seconds.", n_tokens: "Generated tokens."}}
+stokastisk.telemetry.report.span: {p: {name: "Span name.", attrs: "Span attributes."}, r: "Context manager (a no-op unless OpenTelemetry is installed and configured)."}
+stokastisk.telemetry.worker_metrics.balance_report: {p: {w0: "Metrics of worker 0.", w1: "Metrics of worker 1."}}
+stokastisk.topology.models.Topology: {p: {devices: "DeviceInfo list.", peer_access: "PeerAccess result.", link_class: "'0-1' -> link class.", link_source: "Where link classes came from.", nvlink_available: "None when not measured.", nccl_available: "Whether NCCL is available.", nccl_compiled_version: "NCCL version torch was built with.", nccl_runtime_transport: "Only known from an NCCL log; never guessed.", cuda_runtime_version: "CUDA runtime version.", driver_version: "NVIDIA driver version.", cpu_count: "CPUs.", cpu_affinity: "CPU ids the process may use.", system_ram_available_gib: "Available RAM.", system_ram_total_gib: "Total RAM.", notes: "Discovery notes.", recommended_parallelism: "Filled by discover_topology()."}}
+stokastisk.topology.pcie.parse_topo_matrix: {p: {text: "Output of nvidia-smi topo -m."}}

@@ -11,20 +11,29 @@ Static analysis of `sdk/stokastisk` (AST) against the built site's `objects.inv`
 | omitted_internal_helpers | 4 |
 | gaps | 0  |
 | all_exports | 51 |
-| all_exports_documented | 49 |
+| all_exports_documented | 50 |
 | all_exports_module_index_only | 0  |
-| all_exports_upstream_or_omitted | 2 → SamplingParams, __version__ |
+| all_exports_upstream_or_omitted | 1 → SamplingParams |
 | public_methods_on_documented_classes | {'documented': 18, 'no-docstring (module index only)': 29} |
 | missing_from_sdk_module_index | 0  |
 | guide_citations_that_do_not_resolve | 0  |
 | reference_objects_in_inventory | 263 |
+| depth_total_objects | 275 |
+| depth_complete | 252 |
+| depth_partial | 0  |
+| depth_internal_justified | 23 |
+| depth_without_detail_section | 0  |
+| depth_by_kind | {'const': {'complete': 50, 'internal': 2}, 'class': {'complete': 37, 'internal': 6}, 'method': {'complete': 44, 'internal': 5}, 'function': {'complete': 103, 'internal': 8}, 'property': {'complete': 18, 'internal': 2}} |
+| stale_site_notes | 0  |
+| source_links_invalid | 0  |
+| baseline_2026_11_19 | {'public_module_level_names': 203, 'own_great_docs_page': 137, 'module_index_only': 26, 'omitted_data_tables': 36, 'omitted_internal_helpers': 4, 'top_level_exports_documented': '49 of 51', 'class_methods_documented': 18, 'class_methods_index_only': 29} |
 
 ## `stokastisk.__all__`
 
 | Name | Result | Page or reason |
 |---|---|---|
 | `LLM` | documented | `stokastisk.engine.LLM` |
-| `SamplingParams` | upstream | `vLLM class re-exported lazily from the bundled vLLM 0.25.1; documented upstream, not by this site` |
+| `SamplingParams` | upstream | `vLLM class re-exported lazily from the bundled vLLM 0.25.1; documented upstream, not by this site; explained in user-guide/api-map.html` |
 | `StokastiskConfig` | documented | `stokastisk.config.StokastiskConfig` |
 | `validate_environment` | documented | `stokastisk.diagnostics.validate_environment` |
 | `validate_kaggle_t4` | documented | `stokastisk.validate_kaggle_t4` |
@@ -38,7 +47,7 @@ Static analysis of `sdk/stokastisk` (AST) against the built site's `objects.inv`
 | `EngineError` | documented | `stokastisk.errors.EngineError` |
 | `ConfigurationError` | documented | `stokastisk.errors.ConfigurationError` |
 | `AttentionBackendError` | documented | `stokastisk.errors.AttentionBackendError` |
-| `__version__` | omitted | `package version string; value is on the homepage and the install page` |
+| `__version__` | documented | `hand-written: user-guide/api-map.html#version-attributes and api-engine-config (stokastisk._version)` |
 | `LIMITS` | documented | `stokastisk.limits.LIMITS` |
 | `check_resources` | documented | `stokastisk.limits.check_resources` |
 | `cpu_budget` | documented | `stokastisk.limits.cpu_budget` |

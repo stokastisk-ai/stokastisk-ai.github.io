@@ -24,8 +24,10 @@ from pathlib import Path
 from urllib.parse import unquote, urldefrag, urlparse
 
 ROOT = Path(__file__).resolve().parent.parent
-BASE = "https://stokastisk-ai.github.io/stokastisk-docs/"
-PREFIX = urlparse(BASE).path            # "/stokastisk-docs/"
+BASE = "https://stokastisk-ai.github.io/"
+PREFIX = urlparse(BASE).path            # "/"
+SDK_NAMESPACE = ("/stokastisk/",)     # the SDK repository's own project site (package index, old guide): same host, not part of this build
+LEGACY = "stokastisk-docs/"           # redirect pages for the former project-site URLs
 SECRET_RE = re.compile(r"(hf_[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY|tokens\.env)")
 LOCAL_RE = re.compile(r"(/media/waqasm86|/home/waqasm86|file:///|localhost:\d+/|127\.0\.0\.1:\d+/[a-z])")
 NOINDEX_OK = {"404.html"}
@@ -105,7 +107,8 @@ def main():
         fails.append(msg)
 
     htmls = sorted(site.rglob("*.html"))
-    htmls = [p for p in htmls if "site_libs" not in p.parts and "_extensions" not in p.parts]
+    redirects = [p for p in htmls if p.relative_to(site).as_posix().startswith(LEGACY)]
+    htmls = [p for p in htmls if "site_libs" not in p.parts and "_extensions" not in p.parts and p not in redirects]
     pages = {}
     for p in htmls:
         pg = Page()
@@ -145,6 +148,7 @@ def main():
         descs[d].append(rel)
         if pg.h1 != 1:
             multi_h1.append(rel)
+            fail(f"{rel}: {pg.h1} <h1> elements")
         for im in pg.imgs:
             if "alt" not in im:
                 fail(f"{rel}: <img> without alt: {im.get('src')}")
@@ -156,8 +160,6 @@ def main():
                 json.loads(ld)
             except Exception as e:
                 fail(f"{rel}: invalid JSON-LD ({e})")
-    if multi_h1:
-        warns.append(f"{len(multi_h1)} pages have more than one <h1> (Great Docs API-page template; e.g. {', '.join(multi_h1[:3])})")
     info["pages_with_multiple_h1"] = len(multi_h1)
     for label, d in (("title", titles), ("description", descs)):
         for v, where in d.items():
@@ -184,7 +186,7 @@ def main():
             u, frag = urldefrag(h)
             parsed = urlparse(u)
             if parsed.scheme in ("http", "https"):
-                if parsed.netloc == urlparse(BASE).netloc and parsed.path.startswith(PREFIX):
+                if parsed.netloc == urlparse(BASE).netloc and not parsed.path.startswith(SDK_NAMESPACE):
                     rel_p = parsed.path.removeprefix(PREFIX)
                     tp = site / rel_p
                     if tp.is_dir():
@@ -205,16 +207,24 @@ def main():
             if frag and tgt.suffix == ".html" and tgt in pages and frag not in pages[tgt].ids:
                 if not frag.startswith(("tab-", "section-", "fn", "ref-", "cb")):
                     bad_anchors.append((rel, frag))
+                    fail(f"{rel}: missing anchor #{frag} in {tgt.relative_to(site).as_posix()}")
     info["broken_internal_links"] = bad_links
-    # Great Docs' inline-code autolinks end in "#stokastisk.<name>" fragments that its API pages do not define;
-    # the page still opens (the browser ignores an unknown fragment). Anything else on a hand-written page is a real error.
-    guide_anchor = [(r, f) for r, f in bad_anchors if not r.startswith("reference/") and not f.startswith("stokastisk.")]
-    info["missing_anchors_total"], info["missing_anchors_in_hand_written_pages"] = len(bad_anchors), len(guide_anchor)
-    if bad_anchors:
-        warns.append(f"{len(bad_anchors)} links to anchors that are not in the target page (Great Docs-generated reference links such as #stokastisk.LLM; e.g. {bad_anchors[0][0]} -> #{bad_anchors[0][1]})")
-    for r, f in guide_anchor:
-        fail(f"{r}: missing anchor #{f} (hand-written page)")
+    info["missing_anchors"] = len(bad_anchors)
 
+    # namespace and legacy redirects
+    if (site / "stokastisk").exists():
+        fail("site contains a /stokastisk/ directory: that namespace belongs to the SDK repository's project site")
+    bad_red = 0
+    for r in redirects:
+        t = r.read_text(encoding="utf-8")
+        rel = r.relative_to(site).as_posix()[len(LEGACY):]
+        tgt = BASE + ("" if rel == "index.html" else rel)
+        if f'rel="canonical" href="{tgt}"' not in t or f'content="0; url={tgt}"' not in t or not (site / rel).is_file():
+            bad_red += 1
+            fail(f"legacy redirect wrong or without target: {rel}")
+    info["legacy_redirect_pages"], info["legacy_redirect_errors"] = len(redirects), bad_red
+    if not redirects:
+        fail("no legacy /stokastisk-docs/ redirect pages were generated")
     # sitemap
     sm = site / "sitemap.xml"
     if not sm.is_file():
@@ -227,8 +237,8 @@ def main():
             fail("sitemap has duplicate URLs")
         mapped = set()
         for u in locs:
-            if not u.startswith(BASE):
-                fail(f"sitemap URL outside canonical base: {u}")
+            if not u.startswith(BASE) or u.startswith(BASE + LEGACY) or u.startswith(BASE + "stokastisk/"):
+                fail(f"sitemap URL outside the canonical docs namespace: {u}")
                 continue
             rel = u[len(BASE):] or "index.html"
             if rel.endswith("/"):
@@ -252,7 +262,7 @@ def main():
     blocks = bad_blocks = 0
     for p, pg in pages.items():
         rel_ = p.relative_to(site).as_posix()
-        if rel_.startswith("reference/") or rel_ in ("license.html", "changelog.html", "skills.html"):
+        if rel_.startswith(("reference/", "user-guide/api-")) or rel_ in ("license.html", "changelog.html", "skills.html"):
             continue                      # generated signature blocks and non-Python files are not examples
         for code in pg.code:
             lines = [l for l in code.splitlines() if l.strip() and not l.lstrip().startswith(("!", "%"))]
@@ -292,6 +302,13 @@ def main():
                 fail(f"{f.relative_to(site).as_posix()}: matches a secret pattern (value not printed)")
             if LOCAL_RE.search(t):
                 fail(f"{f.relative_to(site).as_posix()}: contains a local path or localhost URL")
+    # private maintenance instructions must never be published as end-user skills or LLM context
+    private = re.compile(r"stokastisk-docs-maintain|stokastisk-docs-seo|repair-publish|migrate-root|CLAUDE\.md|disable-model-invocation", re.I)
+    skill_files = [site / "skills.html", site / "llms.txt", site / "llms-full.txt", *sorted((site / ".well-known").rglob("*"))] if (site / ".well-known").exists() else [site / "skills.html", site / "llms.txt", site / "llms-full.txt"]
+    for f in skill_files:
+        if f.is_file() and private.search(f.read_text(encoding="utf-8", errors="ignore")):
+            fail(f"{f.relative_to(site).as_posix()}: mentions private maintenance instructions")
+    info["agent_skill_files_checked"] = sum(1 for f in skill_files if f.is_file())
     forbidden = [f for f in site.rglob("*") if f.is_file() and f.suffix in {".whl", ".safetensors", ".bin", ".so", ".env", ".pt", ".gguf", ".zip"}]
     for f in forbidden:
         fail(f"forbidden binary/credential-type file published: {f.relative_to(site).as_posix()}")
