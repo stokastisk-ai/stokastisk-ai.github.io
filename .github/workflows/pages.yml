@@ -1,0 +1,66 @@
+name: docs
+# Builds the Stokastisk documentation with Great Docs + Quarto from an IMMUTABLE SDK revision
+# (SOURCE.lock.json) and deploys only the generated static site with the official GitHub Pages actions.
+# Pull requests build and validate but never deploy. Deployment runs only from the repository
+# named stokastisk-ai.github.io, because the canonical URL in website/great-docs.yml is https://stokastisk-ai.github.io/.
+# This workflow never touches the SDK repository, its gh-pages branch or the /stokastisk/simple/ package index.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements-docs.txt
+      - uses: quarto-dev/quarto-actions/setup@8a96df13519ee81fd526f2dfca5962811136661b # v2.2.0
+        with:
+          version: 1.11.9
+      - name: Install the documentation toolchain (plain pip, no venv, no Ruff, no vLLM/torch/CUDA)
+        run: python -m pip install --no-cache-dir -r requirements-docs.txt
+      - name: Build, post-process and validate
+        run: scripts/build_site.sh --validate
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: docs-reports
+          path: reports/
+          if-no-files-found: ignore
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+        if: github.event_name != 'pull_request'
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        if: github.event_name != 'pull_request'
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    if: github.event_name != 'pull_request' && github.repository == 'stokastisk-ai/stokastisk-docs'
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

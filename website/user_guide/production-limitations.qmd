@@ -1,0 +1,50 @@
+---
+title: "Production readiness and limitations"
+description: "What Stokastisk 0.1.0 is verified for on Kaggle dual Tesla T4 GPUs, the exact verified scope, and every known limitation: unsupported features, untested modes and dependency caveats."
+guide-section: "Evidence and limits"
+---
+
+## Verdict and scope
+
+The project's own assessment is **production-ready for Kaggle 2 × Tesla T4, within the verified scope**. "Verified scope" means:
+
+* the three models and modes in the [verified models table](diagnostics-compatibility.qmd#the-verified-models),
+* FP16 and `max_model_len` 2048,
+* the features marked Kaggle-tested in the [feature matrix](feature-matrix.qmd).
+
+Everything else is untested, experimental or unsupported and is labelled so. "Production" here means the Kaggle notebook environment; no other platform is claimed.
+
+## Feature labels
+
+| Feature | Label |
+|---|---|
+| FP16 generate, chat, complete, `TRITON_ATTN`, determinism, timeouts, serialised calls, cleanup | Kaggle-tested |
+| Structured output (xgrammar 0.2.3, schema-validated, no fallback) | Kaggle-tested with conditions (bounded schemas; acceptance model 0.5B) |
+| `ServerProcess` (OpenAI-compatible, streaming, restart, startup-failure report) | Kaggle-tested with conditions (Qwen2.5-0.5B, TP=1) |
+| `/metrics` | Kaggle-tested with conditions (presence of `vllm:` samples, not their values) |
+| TP=2 and `ReplicaPool` | Kaggle-tested (slower than TP=1 for models that fit one T4); TP=2 also with 3B and Coder-7B |
+| PP=2 | Kaggle-tested, **experimental** (also 3B and Coder-7B) |
+| `ReplicaPool` worker-failure recovery | CPU-tested with fake workers only |
+| Flash-free tree | Kaggle-tested: no Flash backend or library in any process |
+| One-line install | Kaggle-tested for build 3; for build 5, the command was verified by downloading the published file and checking its hash, not by a Kaggle run |
+| `models` dependency profile | implemented, not exercised |
+| Prefix caching, chunked prefill, CUDA graphs, custom all-reduce, LoRA, multimodal, speculative decoding | **unknown**: never run |
+| SageMaker `/ping`, `/invocations` | not exercised, not claimed |
+| OpenTelemetry exporters, Mistral-family models, bfloat16, FP8/FP4 native, L4/SM89, FlashAttention, FlashInfer, FlashMLA, direct `vllm.LLM` or `vllm serve` | **unsupported** |
+
+## Known limitations
+
+1. Kaggle's `fastapi 0.141.1` is newer than upstream vLLM's `<0.137` cap (SageMaker handler overrides). The app built and served on Kaggle; the SageMaker routes are not advertised and were not exercised.
+2. xgrammar 0.2.3 is older than the 0.2.5.post1 vLLM was developed against; it is inside vLLM's declared range and JSON-schema constrained decoding was Kaggle-tested. A grammar cannot make a model stop: bound open-ended schema fields.
+3. Offline generation cannot be cancelled: `timeout=` raises, the request runs on and later calls wait for it.
+4. `ReplicaPool` workers are non-daemon; a hard-killed parent leaves them behind (Kaggle ends the session anyway).
+5. Only the three models above were run. Other checkpoints, including other `Qwen2ForCausalLM` models, report `UNKNOWN_REQUIRES_EVIDENCE`. The 7B run leaves little GPU memory.
+6. The observability exporters conflict with Kaggle's protobuf 7.x and are unsupported.
+7. `--extra-index-url` (the optional convenience index) also searches PyPI; the recommended command does not.
+8. Builds 4 and 5 have not been executed on a GPU. If a defect existed in a path they share with build 3, it would be in all of them.
+9. TP=2, PP=2 and replicas are slower than TP=1 for a model that fits one T4. No throughput figure is promised.
+10. Python 3.13 only; Kaggle's dual T4 image only. Other GPUs (including L4/SM89) are not implemented.
+
+## Not claimed anywhere on this site
+
+General compatibility with other GPUs, other cloud platforms, other model families, quantized checkpoints, long contexts, large batches or any specific throughput or latency number.

@@ -1,0 +1,58 @@
+---
+title: "Kaggle notebooks and reproducible evidence"
+description: "Reproduce Stokastisk on Kaggle dual Tesla T4 GPUs with notebooks 18 and 19, and see exactly which runs were executed on build 3, with models, modes, memory readings and archived evidence."
+guide-section: "Evidence and limits"
+---
+
+## Reproducible notebooks
+
+Both notebooks are in the repository under `notebooks/` with outputs stripped. They are the end-user pattern: one `pip install` cell, then ordinary cells.
+
+| Notebook | What it runs | Source |
+|---|---|---|
+| 18: Qwen2.5 on T4 | Qwen2.5-0.5B-Instruct TP=1 (plain cells), then Qwen2.5-3B-Instruct with TP=2 and with PP=2 | [notebooks/18_stokastisk_qwen25_t4.ipynb](https://github.com/stokastisk-ai/stokastisk/blob/387c414295fbd65e6c93099c58dfeee43c3ce3fc/notebooks/18_stokastisk_qwen25_t4.ipynb) |
+| 19: Qwen2.5-Coder-7B | the original unquantized FP16 checkpoint with TP=2, then PP=2, one Python-coding prompt each | [notebooks/19_stokastisk_qwen25_coder_7b_dual_t4.ipynb](https://github.com/stokastisk-ai/stokastisk/blob/387c414295fbd65e6c93099c58dfeee43c3ce3fc/notebooks/19_stokastisk_qwen25_coder_7b_dual_t4.ipynb) |
+
+Run each from the top in a fresh Kaggle session (GPU T4 × 2, Internet ON). They are not throughput benchmarks; on two PCIe-connected T4s TP=1 is fastest for any model that fits one card. Their install cell installs **build 5**; the recorded outputs came from build 3.
+
+## What was executed, and on which build
+
+| Notebook | Date | What ran | Recorded result | Build |
+|---|---|---|---|---|
+| 15: acceptance suite (maintainers) | 2026-11-13 | full GPU suite on a locally built bundle | installer 32/32, static 79/79, engine 44/44, parallel 23/23, server 21/21, summary 15/15 | 3 (acceptance wheel) |
+| 16: quickstart | 2026-11-13 | `pip install` from the published index and a `demo.py` script | `TRITON_ATTN`; completion, chat, structured JSON; clean shutdown | 3 |
+| 18: Qwen2.5, plain cells | 2026-11-14 | 0.5B-Instruct TP=1; 3B-Instruct TP=2; 3B-Instruct PP=2 | all generated; `TRITON_ATTN`; GPUs released (14.46 of 14.56 GiB free) | 3 |
+| 19: Qwen2.5-Coder-7B-Instruct | 2026-11-14 | original FP16 checkpoint, TP=2 then PP=2 | both generated; `TRITON_ATTN`; GPUs released | 3 |
+
+Environment of those runs: Kaggle 2 × Tesla T4, Python 3.13.16, PyTorch 2.11.0+cu130, Triton 3.6.0, CUDA 13.0.
+
+::: {.callout-important}
+## Build 3 was tested, build 5 is current
+Builds 4 and 5 were **not** run on Kaggle. Build 5 differs from build 3 only in compatibility reporting and one error message; the audits prove the vLLM tree, native binaries, dependency pins and executable SDK code unchanged, so the build-3 evidence is **inherited** for those paths. See [Release verification](release-verification.qmd).
+:::
+
+## What the notebook 15 stages proved
+
+| Stage | Proves |
+|---|---|
+| installer | protected packages untouched; hash-pinned locks installed with `--no-deps --no-index`; no new `pip check` line; feature imports; installed tree has 0 Flash files |
+| static | configuration, compatibility and serving validation; backend registry on SM7.5; Flash import guard; dependency completeness; CPU structured-output stack |
+| engine | FP16 generate, chat and complete; determinism; input validation; pinned-xgrammar structured output; serialisation and timeout; `TRITON_ATTN` in config and as a compiled kernel; no Flash library; close and cleanup |
+| parallel | TP=2, PP=2 (experimental) and `ReplicaPool`: real generation, both GPUs engaged, clean shutdown, memory released; topology and recommender |
+| server | `vllm serve` start and ready, models, chat, streaming, HTTP errors, structured output over HTTP, metrics, startup-failure report, port check, restart, graceful shutdown |
+| summary | all stages describe the same wheel and runtime; a missing report is `NOT_RUN`; only `PASS` passes |
+
+The harness that produced these reports is no longer part of the repository; the raw reports, logs and executed notebooks are archived under `evidence/kaggle/` and indexed with SHA256 values in `evidence/kaggle/evidence-manifest.json`. Two original output archives (about 17 MB, mostly Triton caches) are not in the repository; their hashes are in the manifest.
+
+Result vocabulary: `PASS`, `FAIL`, `ERROR`, `WARNING`, `SKIPPED`, `NOT_RUN`. Only `PASS` passes.
+
+## Memory readings recorded
+
+| Run | Free GiB per GPU during inference | Free GiB after `close()` |
+|---|---|---|
+| Qwen2.5-3B-Instruct, TP=2 | about 1.09 | 14.46 of 14.56 |
+| Qwen2.5-3B-Instruct, PP=2 | 1.96 and 1.48 | 14.46 of 14.56 |
+| Qwen2.5-Coder-7B-Instruct, TP=2 | about 1.34 | 14.46 of 14.56 |
+| Qwen2.5-Coder-7B-Instruct, PP=2 | 2.42 and 1.93 | 14.46 of 14.56 |
+
+All with `max_model_len=2048`, `gpu_memory_utilization=0.88`, one prompt. These are single measurements, not benchmarks and not a promise for other models.

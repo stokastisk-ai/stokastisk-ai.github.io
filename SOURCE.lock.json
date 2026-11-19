@@ -1,0 +1,23 @@
+{
+ "schema": 1,
+ "note": "Immutable inputs of the documentation build. Change deliberately; the workflow never follows a branch tip.",
+ "sdk": {
+  "repository": "https://github.com/stokastisk-ai/stokastisk",
+  "commit": "387c414295fbd65e6c93099c58dfeee43c3ce3fc",
+  "project_version": "0.1.0",
+  "current_wheel_build": 5
+ },
+ "great_docs": {
+  "repository": "https://github.com/posit-dev/great-docs",
+  "commit": "d9f2603f0b1fbaa64b56de2b370c1d6d7a08de6e",
+  "reported_version": "0.17.1.dev1741+gd9f2603f0",
+  "note": "1741 commits after the v0.17.0 release; the local checkout inspected for this site",
+  "install": "source at the pinned commit via PYTHONPATH; Ruff omitted (optional formatter, fallback verified)"
+ },
+ "quarto": {
+  "version": "1.11.9",
+  "install": "standalone (~/.local/opt/quarto-1.11.9 locally, quarto-dev/quarto-actions/setup in CI)"
+ },
+ "python": "3.13",
+ "canonical_url": "https://stokastisk-ai.github.io/stokastisk-docs/"
+}

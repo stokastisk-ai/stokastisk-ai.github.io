@@ -1,0 +1,52 @@
+---
+title: "Release verification: wheel build 5 and Kaggle-tested build 3"
+description: "Wheel identities, SHA256 hashes and the three separate evidence classes behind Stokastisk 0.1.0: Kaggle-tested build 3, CPU-verified build 5, and the withdrawn builds."
+guide-section: "Evidence and limits"
+---
+
+The authoritative machine-readable record is `RELEASE.json` in the SDK repository. This page reflects it at the pinned source revision shown in the footer of the [homepage](../index.html).
+
+## Wheel identities
+
+| Item | Value |
+|---|---|
+| Project version | `0.1.0`, locked by `VERSION_POLICY.md`; tag and GitHub release `v0.1.0` unchanged |
+| **Current wheel: build 5** | `stokastisk-0.1.0-5-cp313-cp313-linux_x86_64.whl` |
+| Size | 38,057,515 bytes |
+| SHA256 | `fe80d7c36fa78cf8a26feb1e00bb5f1f006ca45a027450353603976320ae0b3e` |
+| Hosted at | `https://huggingface.co/waqasm86/stokastisk/resolve/main/wheels/stokastisk-0.1.0-5-cp313-cp313-linux_x86_64.whl` |
+| Base build input | `vllm-0.25.1-cp38-abi3-linux_x86_64.whl`, 38,067,501 bytes, SHA256 `cc3bcafb6516791990ca302073ae153a08465d3df1e460d666e3ec09b4e98f5e`, attached to the GitHub release `v0.1.0`; **not** an end-user SDK install |
+| Withdrawn | build 3 (SHA256 `72039ca4044e48fdf5edca8051dcb48b42fe61a69e07715fa8803e029581fe12`) and build 4 (SHA256 `052156d71adc6ad9966901565f86dbded9ff41c620c782db4ff377a1a2b4f62e`); not install targets |
+
+The **project version** never changes; the **build tag** in the file name numbers rebuilds of the same version.
+
+## Three separate classes of evidence
+
+| Class | What | State |
+|---|---|---|
+| **Build 3, Kaggle acceptance** (notebook 15, 2026-11-13) | installer 32/32, static 79/79, engine 44/44, parallel 23/23, server 21/21, summary 15/15 on acceptance wheel `b31588c9b5f0d5ae103903283c7cfc25a9d7ef6c00112c3d46bb7b9ee84b023a`; the published build-3 wheel differs from it only in `METADATA` and `RECORD` (2,580 of 2,582 members byte-identical) | **Kaggle-tested** |
+| **Build 3, end-user notebooks** 16, 18, 19 (2026-11-13/14) | the published install, then inference with Qwen2.5-0.5B (TP=1), Qwen2.5-3B (TP=2, PP=2) and Qwen2.5-Coder-7B (TP=2, PP=2) | **Kaggle-tested**, only those exact models and modes |
+| **Builds 4 and 5, CPU only** | independent wheel audit (21 checks), member-by-member deltas, reproducible rebuild, unit and documentation-consistency tests | **verified on CPU; not run on Kaggle** |
+
+## What changed from build 3 to build 5
+
+* **Build 4** corrected the compatibility *reporting* shipped in the SDK (`stokastisk.compat`: the evidence records, a new exact-model registry `MODEL_EVIDENCE`, and per-model answers from `check_model`). Of 2,582 wheel members, 2,577 are byte-identical to build 3: every `vllm/**` file, every native binary, every dependency pin.
+* **Build 5** differs from build 4 in three members: `stokastisk/serving.py`, `WHEEL` and `RECORD`. Only string constants changed in `serving.py` (identical AST once strings are blanked): the `MissingDependencyError` remedy now points to the pinned install command. 2,579 of 2,582 members are byte-identical to build 4; a second build produced the same SHA256; no CUDA binary was rebuilt.
+
+Because those audits prove the inference, server and native code unchanged, build 3's Kaggle evidence is **inherited** through build 4 for build 5. It is not a Kaggle run of build 5, and this site never presents it as one.
+
+## Where the evidence lives
+
+| Artifact | Location in the SDK repository |
+|---|---|
+| Executed notebooks and reports | `evidence/kaggle/`, indexed by `evidence/kaggle/evidence-manifest.json` |
+| Build-5 audit, delta and release manifest | `evidence/release/build-5/` |
+| Release identities | `RELEASE.json`, `RELEASE.md` |
+| Version policy | `VERSION_POLICY.md` |
+
+## Verify your own download
+
+```bash
+curl -L -o stokastisk.whl https://huggingface.co/waqasm86/stokastisk/resolve/main/wheels/stokastisk-0.1.0-5-cp313-cp313-linux_x86_64.whl
+sha256sum stokastisk.whl   # expect fe80d7c36fa78cf8a26feb1e00bb5f1f006ca45a027450353603976320ae0b3e
+```

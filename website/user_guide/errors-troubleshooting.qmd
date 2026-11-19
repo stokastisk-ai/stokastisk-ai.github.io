@@ -1,0 +1,76 @@
+---
+title: "Errors and troubleshooting"
+description: "Stokastisk exception hierarchy, what each error means, and fixes for common Kaggle T4 problems: out-of-memory, hash mismatches, Flash backend errors, hangs and slow tensor parallelism."
+guide-section: "Measure and diagnose"
+---
+
+All SDK exceptions derive from `StokastiskError` (a `RuntimeError`). Import them from `stokastisk`. Catch broadly with `except stokastisk.StokastiskError`.
+
+```text
+StokastiskError
+├── EnvironmentValidationError
+│   ├── GPUDiscoveryError
+│   └── TopologyError
+├── EngineError
+│   ├── AttentionBackendError
+│   ├── EngineClosedError
+│   ├── EngineTimeoutError
+│   ├── EngineCloseError
+│   ├── StructuredOutputError
+│   └── ServerError
+│       ├── ServerStartupError
+│       ├── ServerHTTPError
+│       └── ServerShutdownError
+├── MissingDependencyError
+├── ReplicaError
+└── ConfigurationError (also a ValueError)
+    ├── UnsupportedParallelismError
+    ├── InsufficientMemoryError
+    └── StokastiskCompatibilityError
+```
+
+| Exception | Typical cause | What to do |
+|---|---|---|
+| `ConfigurationError` | invalid `StokastiskConfig` value | read the message; it names the field |
+| `UnsupportedParallelismError` | TP×PP above 2, strategy and size mismatch | use TP=2 **or** PP=2, not both |
+| `StokastiskCompatibilityError` | Flash backend, bfloat16, unsupported model or quantization | use `TRITON_ATTN` and `dtype="half"` |
+| `InsufficientMemoryError` | estimate exceeds GPU memory | smaller `max_model_len`, TP=2, or a smaller model |
+| `EngineError` | vLLM failed to start or rejected a request | read `__cause__` and the log above it |
+| `AttentionBackendError` | engine is not on `TRITON_ATTN` | should not happen; report it |
+| `EngineClosedError` | method called after `close()` | create a new `LLM` |
+| `EngineTimeoutError` | `timeout=` expired (the request keeps running) | wait, or raise the timeout |
+| `EngineCloseError` | engine shutdown raised (cleanup still completed) | check GPU memory with `mem_get_info` |
+| `StructuredOutputError` | invalid, truncated or non-conforming JSON | bound the schema and raise `max_tokens` |
+| `MissingDependencyError` | a required package is not installed | reinstall `stokastisk` with the pinned command |
+| `ServerStartupError` | `vllm serve` exited or timed out | read `.log_excerpt`, `.log_path` and `.command` |
+| `ServerHTTPError` | non-200 response or truncated stream | read the status and body in the message |
+| `ServerShutdownError` | a server process could not be killed | rare; restart the notebook |
+| `ReplicaError` | worker died, timed out, or had to be killed on close | `restart_dead()` or recreate the pool |
+| `EnvironmentValidationError`, `GPUDiscoveryError`, `TopologyError` | wrong runtime or no GPU | set the accelerator to *GPU T4 × 2* |
+
+## Troubleshooting
+
+| Symptom | Cause and fix |
+|---|---|
+| `No matching distribution` / `is not a supported wheel` | not Python 3.13, or Internet is OFF |
+| `THESE PACKAGES DO NOT MATCH THE HASHES` | the downloaded file is not the one the command names; do not use it |
+| pip wants to change torch or transformers | should not happen; report it with the full `pip install` log |
+| Engine start fails, no GPU | accelerator is not *GPU T4 × 2* |
+| `ProhibitedBackendError` or a `ConfigurationError` mentioning Flash | a Flash backend was requested; only `TRITON_ATTN` exists |
+| `bfloat16` error | use `dtype="half"` |
+| Out of memory at start-up | lower `max_model_len` (for example 2048) or `gpu_memory_utilization`, or use `tensor_parallel_size=2` |
+| Out of memory after an earlier experiment | the previous engine is still alive: `close()` it, `gc.collect()`, check `torch.cuda.mem_get_info(i)` |
+| Engine code hangs or re-runs in a script | add `if __name__ == "__main__":` (vLLM spawns processes that re-import the script) |
+| `Triton kernel JIT compilation during inference` | one-time warm-up warning on the first request; informational |
+| `unauthenticated requests to the HF Hub` | informational; add an `HF_TOKEN` Kaggle secret for faster downloads |
+| `ProcessGroupNCCL … unbatched P2P op` (PP=2) | harmless warning in the recorded runs |
+| `UNKNOWN_REQUIRES_EVIDENCE` from `check_model` | that exact model id was never run on Kaggle; not an error ([Diagnostics](diagnostics-compatibility.qmd)) |
+| `Process manager: force killing remaining processes` at shutdown | seen after every TP=2 and PP=2 engine in the Kaggle runs; the GPUs were fully released each time |
+| `StructuredOutputError: truncated` | bound the schema fields and raise `max_tokens` |
+| `ServerStartupError` | read `e.log_excerpt` and `e.log_path`; a second server on the same port also causes this |
+| Slow with TP=2 or PP=2 | expected for a model that fits one T4 (PCIe, no NVLink); use TP=1 or `ReplicaPool` |
+| Disk full on `/kaggle/working` | the quota is 20 GiB; check `stokastisk.working_dir_status()` |
+
+To start clean: `llm.close()`, then restart the Kaggle session.
+
+Report problems at [github.com/stokastisk-ai/stokastisk/issues](https://github.com/stokastisk-ai/stokastisk/issues) with the output of `stokastisk.report()`.

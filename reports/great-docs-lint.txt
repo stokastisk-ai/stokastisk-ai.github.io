@@ -1,0 +1,158 @@
+Using __all__ with 51 exports
+Excluding 5 object(s) (not found by static analysis): ReplicaPool, SamplingParams, ServerProcess, build_serve_command, find_free_port
+
+════════════════════════════════════════════════════════════
+📋 Documentation Lint Results
+════════════════════════════════════════════════════════════
+
+Package: stokastisk
+Exports checked: 46
+
+────────────────────────────────────────────────────────────
+  ambiguous-autolink  [18 warning(s)]
+────────────────────────────────────────────────────────────
+  ⚠️   stokastisk.LLM.closed
+        `close` is claimed by stokastisk.LLM.close and
+        stokastisk.parallel.replica.ReplicaPool.close, so the
+        code span stays unlinked. Qualify it, as in
+        `~~stokastisk.LLM.close`, or mark it `{.gd-no-link}` if
+        it isn't a reference.
+  ⚠️   website/user_guide/architecture.qmd
+        `chat` is claimed by stokastisk.LLM.chat and
+        stokastisk.serving.chat, so the code span stays
+        unlinked. Qualify it, as in `~~stokastisk.LLM.chat`, or
+        mark it `{.gd-no-link}` if it isn't a reference.
+  ⚠️   website/user_guide/architecture.qmd
+        `close` is claimed by stokastisk.LLM.close and
+        stokastisk.parallel.replica.ReplicaPool.close, so the
+        code span stays unlinked. Qualify it, as in
+        `~~stokastisk.LLM.close`, or mark it `{.gd-no-link}` if
+        it isn't a reference.
+  ⚠️   website/user_guide/diagnostics-compatibility.qmd
+        `report` is claimed by stokastisk.benchmarks.report and
+        stokastisk.report, so the code span stays unlinked.
+        Qualify it, as in `~~stokastisk.benchmarks.report`, or
+        mark it `{.gd-no-link}` if it isn't a reference.
+  ⚠️   website/user_guide/engine.qmd
+        `chat` is claimed by stokastisk.LLM.chat and
+        stokastisk.serving.chat, so the code span stays
+        unlinked. Qualify it, as in `~~stokastisk.LLM.chat`, or
+        mark it `{.gd-no-link}` if it isn't a reference.
+  ⚠️   website/user_guide/engine.qmd
+        `close` is claimed by stokastisk.LLM.close and
+        stokastisk.parallel.replica.ReplicaPool.close, so the
+        code span stays unlinked. Qualify it, as in
+        `~~stokastisk.LLM.close`, or mark it `{.gd-no-link}` if
+        it isn't a reference.
+  ⚠️   website/user_guide/engine.qmd
+        `close` is claimed by stokastisk.LLM.close and
+        stokastisk.parallel.replica.ReplicaPool.close, so the
+        code span stays unlinked. Qualify it, as in
+        `~~stokastisk.LLM.close`, or mark it `{.gd-no-link}` if
+        it isn't a reference.
+  ⚠️   website/user_guide/engine.qmd
+        `chat` is claimed by stokastisk.LLM.chat and
+        stokastisk.serving.chat, so the code span stays
+        unlinked. Qualify it, as in `~~stokastisk.LLM.chat`, or
+        mark it `{.gd-no-link}` if it isn't a reference.
+  ⚠️   website/user_guide/engine.qmd
+        `close` is claimed by stokastisk.LLM.close and
+        stokastisk.parallel.replica.ReplicaPool.close, so the
+        code span stays unlinked. Qualify it, as in
+        `~~stokastisk.LLM.close`, or mark it `{.gd-no-link}` if
+        it isn't a reference.
+  ⚠️   website/user_guide/engine.qmd
+        `close` is claimed by stokastisk.LLM.close and
+        stokastisk.parallel.replica.ReplicaPool.close, so the
+        code span stays unlinked. Qualify it, as in
+        `~~stokastisk.LLM.close`, or mark it `{.gd-no-link}` if
+        it isn't a reference.
+  ⚠️   website/user_guide/engine.qmd
+        `close` is claimed by stokastisk.LLM.close and
+        stokastisk.parallel.replica.ReplicaPool.close, so the
+        code span stays unlinked. Qualify it, as in
+        `~~stokastisk.LLM.close`, or mark it `{.gd-no-link}` if
+        it isn't a reference.
+  ⚠️   website/user_guide/engine.qmd
+        `close` is claimed by stokastisk.LLM.close and
+        stokastisk.parallel.replica.ReplicaPool.close, so the
+        code span stays unlinked. Qualify it, as in
+        `~~stokastisk.LLM.close`, or mark it `{.gd-no-link}` if
+        it isn't a reference.
+  ⚠️   website/user_guide/errors-troubleshooting.qmd
+        `close` is claimed by stokastisk.LLM.close and
+        stokastisk.parallel.replica.ReplicaPool.close, so the
+        code span stays unlinked. Qualify it, as in
+        `~~stokastisk.LLM.close`, or mark it `{.gd-no-link}` if
+        it isn't a reference.
+  ⚠️   website/user_guide/errors-troubleshooting.qmd
+        `close` is claimed by stokastisk.LLM.close and
+        stokastisk.parallel.replica.ReplicaPool.close, so the
+        code span stays unlinked. Qualify it, as in
+        `~~stokastisk.LLM.close`, or mark it `{.gd-no-link}` if
+        it isn't a reference.
+  ⚠️   website/user_guide/kaggle-examples.qmd
+        `close` is claimed by stokastisk.LLM.close and
+        stokastisk.parallel.replica.ReplicaPool.close, so the
+        code span stays unlinked. Qualify it, as in
+        `~~stokastisk.LLM.close`, or mark it `{.gd-no-link}` if
+        it isn't a reference.
+  ⚠️   website/user_guide/module-index.qmd
+        `close` is claimed by stokastisk.LLM.close and
+        stokastisk.parallel.replica.ReplicaPool.close, so the
+        code span stays unlinked. Qualify it, as in
+        `~~stokastisk.LLM.close`, or mark it `{.gd-no-link}` if
+        it isn't a reference.
+  ⚠️   website/user_guide/telemetry-benchmarking.qmd
+        `report` is claimed by stokastisk.benchmarks.report and
+        stokastisk.report, so the code span stays unlinked.
+        Qualify it, as in `~~stokastisk.benchmarks.report`, or
+        mark it `{.gd-no-link}` if it isn't a reference.
+  ⚠️   website/user_guide/telemetry-benchmarking.qmd
+        `report` is claimed by stokastisk.benchmarks.report and
+        stokastisk.report, so the code span stays unlinked.
+        Qualify it, as in `~~stokastisk.benchmarks.report`, or
+        mark it `{.gd-no-link}` if it isn't a reference.
+
+────────────────────────────────────────────────────────────
+  missing-docstring  [13 error(s), 4 warning(s)]
+────────────────────────────────────────────────────────────
+  ⚠️   LLM.verify_attention_backend
+        Public method 'LLM.verify_attention_backend' has no
+        docstring.
+  ⚠️   LLM.verify_structured_output_backend
+        Public method 'LLM.verify_structured_output_backend' has
+        no docstring.
+  ⚠️   LLM.__enter__
+        Public method 'LLM.__enter__' has no docstring.
+  ⚠️   LLM.__exit__
+        Public method 'LLM.__exit__' has no docstring.
+  ❌  StokastiskConfig
+        Public export 'StokastiskConfig' has no docstring.
+  ❌  validate_kaggle_t4
+        Public export 'validate_kaggle_t4' has no docstring.
+  ❌  discover_gpus
+        Public export 'discover_gpus' has no docstring.
+  ❌  __version__
+        Public export '__version__' has no docstring.
+  ❌  LIMITS
+        Public export 'LIMITS' has no docstring.
+  ❌  cpu_budget
+        Public export 'cpu_budget' has no docstring.
+  ❌  discover_topology
+        Public export 'discover_topology' has no docstring.
+  ❌  Topology
+        Public export 'Topology' has no docstring.
+  ❌  recommend_parallelism
+        Public export 'recommend_parallelism' has no docstring.
+  ❌  Recommendation
+        Public export 'Recommendation' has no docstring.
+  ❌  VLLM_BASE_VERSION
+        Public export 'VLLM_BASE_VERSION' has no docstring.
+  ❌  CUDA_BUILD_TARGET
+        Public export 'CUDA_BUILD_TARGET' has no docstring.
+  ❌  GPU_COMPUTE_CAPABILITY
+        Public export 'GPU_COMPUTE_CAPABILITY' has no docstring.
+
+────────────────────────────────────────────────────────────
+❌ 13 error(s), 22 warning(s)

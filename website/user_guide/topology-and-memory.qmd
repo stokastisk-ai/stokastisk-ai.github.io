@@ -1,0 +1,47 @@
+---
+title: "GPU topology discovery and memory estimation"
+description: "Inspect Kaggle's two Tesla T4 GPUs with stokastisk.discover_topology: PCIe link class, CUDA peer access, NCCL availability, and the model memory estimator behind recommend_parallelism."
+guide-section: "Two GPUs"
+---
+
+## Topology
+
+```python
+import stokastisk
+
+topo = stokastisk.discover_topology()
+print(topo.gpu_count, topo.pair_link(0, 1), topo.peer_access.all_pairs_available)
+print(topo.to_dict())
+```
+
+`Topology` fields include `devices` (name, UUID, compute capability, VRAM, PCIe generation and width), `peer_access`, `link_class` (`NVLINK`, `PIX`, `PXB`, `PHB`, `NODE`, `SYS`, `UNKNOWN`), `nccl_available`, `cuda_runtime_version`, `driver_version`, `cpu_count`, RAM, `notes` and `recommended_parallelism`.
+
+* A value that could not be measured is `None`, never invented.
+* Discovery uses torch, NVML, `nvidia-smi` and sysfs; every source except torch is optional.
+* **Peer access varies between Kaggle VMs.** It was measured as available in one VM and unavailable in another, so the SDK does not rely on it: `disable_custom_all_reduce=True` and `NCCL_P2P_DISABLE=1` are defaults. The Kaggle topology recorded in earlier notebooks was `PHB` (PCIe host bridge).
+
+Lower-level helpers live in `stokastisk.topology`: `DeviceInfo`, `PeerAccess`, `LINK_CLASSES`, `parse_topo_matrix`, `classify_cell`, and the peer-access measurement. See the [module index](module-index.qmd).
+
+## Memory estimation
+
+`stokastisk.parallel.memory.load_model_spec(model, local_files_only=False)` estimates weight and KV-cache MiB from the model's `config.json`. The recommender uses these estimates, which are **not measurements**: always confirm with `torch.cuda.mem_get_info(i)`.
+
+```python
+from stokastisk.parallel.memory import load_model_spec
+
+spec = load_model_spec("Qwen/Qwen2.5-Coder-7B-Instruct")
+print(spec.to_dict())
+```
+
+## Kaggle resource limits
+
+```python
+print(stokastisk.LIMITS)                 # 4 CPU cores, 30 GiB RAM, 20 GiB /kaggle/working, 2 × T4 (SM75, about 15 GiB)
+print(stokastisk.check_resources())      # PASS or WARNING per limit; never raises
+print(stokastisk.working_dir_status())   # /kaggle/working usage versus the 20 GiB quota
+print(stokastisk.cpu_budget())           # CPU cores to plan with
+```
+
+Model downloads go to the Hugging Face cache; large models can fill `/kaggle/working` if you save outputs there.
+
+Next: [CUDA, NCCL and communication](cuda-nccl-communication.qmd).

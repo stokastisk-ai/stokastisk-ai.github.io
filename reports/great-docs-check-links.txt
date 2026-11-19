@@ -1,0 +1,16 @@
+🔗 Checking links...
+   (documentation files only)
+
+============================================================
+📊 Link Check Summary
+============================================================
+
+   Total URLs found: 9
+   URLs checked: 9
+   URLs skipped: 0
+
+   ✅ OK: 9
+   ↪️  Redirects: 0
+   ❌ Broken: 0
+
+✅ All links are valid!

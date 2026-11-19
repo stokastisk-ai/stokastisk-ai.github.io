@@ -1,0 +1,54 @@
+---
+title: "Architecture: wheel, runtime and SDK modules"
+description: "How Stokastisk is built and delivered: a single wheel bundling the SDK and a Flash-free vLLM 0.25.1 compiled for SM75, the dependency model, SDK module roles and verification design."
+guide-section: "Design"
+---
+
+## Target
+
+Kaggle, Python 3.13, 2 × Tesla T4 (SM75, about 15 GiB each, PCIe host bridge, no NVLink; CUDA peer access varies between VMs). PyTorch 2.11.0+cu130 and Triton 3.6.0 come from the image and are **never replaced**. Kaggle limits are baked into `stokastisk.LIMITS`: 4 CPU cores, about 30 GiB RAM, 20 GiB in `/kaggle/working`.
+
+```{mermaid}
+flowchart LR
+  subgraph build["Build (maintainers)"]
+    V[byte-pinned vLLM 0.25.1 wheel<br/>natives for sm_75, CUDA 13.0] --> T[t4_flash_free.py<br/>remove Flash-family modules]
+    T --> W[integrated wheel<br/>stokastisk + vllm]
+    S[sdk/stokastisk] --> W
+  end
+  W --> HF[(Hugging Face CDN<br/>wheels/)]
+  HF -->|pip, SHA256-pinned URL| K[Kaggle notebook<br/>2 × Tesla T4]
+  IDX[PEP 503 index on GitHub Pages] -.->|links + SHA256| HF
+```
+
+## Distribution
+
+One wheel `stokastisk-0.1.0-<build>-cp313-cp313-linux_x86_64.whl` contains:
+
+* `stokastisk/`: the SDK.
+* `vllm/`: vLLM 0.25.1 from the byte-pinned base wheel, run through `scripts/release/t4_flash_free.py`. Every FlashAttention, FlashInfer and FlashMLA module is removed; imports of them are redirected to one explicit placeholder module whose predicates return `False` and whose other functions raise `ProhibitedBackendError`. The attention-backend enums and `AttentionConfig` refuse Flash-family backends, and `import flashinfer`, `flash_attn` and `flash_mla` fail explicitly. No native `.so` is touched.
+* a bundled `vllm-0.25.1.dist-info`, because vLLM resolves its own version through `importlib.metadata`.
+
+The wheel is hosted on the Hugging Face CDN. A static PEP 503 index on GitHub Pages links to it with its SHA256.
+
+## Dependency model
+
+`requirements/<profile>.roots` (exact pins) feed `scripts/release/lock_closure.py`, which writes `<profile>.lock` (SHA256 of every compatible wheel) and an audit record under `closure/`. The resolver treats Kaggle's real package inventory as **protected**: a requirement the baseline does not satisfy is a conflict, never an upgrade. Profiles: `core`, `structured-output`, `serving` (installed by default) and `models` (opt-in). See [Dependency compatibility](dependency-compatibility.qmd).
+
+## SDK modules
+
+| Module | Role |
+|---|---|
+| `config` | `StokastiskConfig`: strict types, T4 defaults, NCCL environment without peer-access reliance |
+| `engine` | `LLM`: policy kwargs enforced, serialised calls with `timeout=`, `generate`, `chat`, `complete`, `generate_structured`, a `close` that reports failures after cleanup |
+| `structured` | JSON-schema validation independent of the backend |
+| `serving` | `ServerProcess` (a `vllm serve` child with a persistent log, process-group shutdown and restart) and a standard-library HTTP client with typed errors |
+| `parallel` | `ReplicaPool`, token-aware scheduler, recommender and memory model |
+| `topology`, `telemetry`, `communication`, `cuda`, `benchmarks`, `nccl`, `limits`, `diagnostics` | discovery, NVML sampling, transports, resource limits, environment report |
+| `compat` | static T4 compatibility: dtype, quantization and feature matrix; `check_model` (refuses Flash-built and Mistral-family models) |
+| `prohibited`, `dependencies` | the Flash policy and the profile registry (single sources of truth) |
+
+The [API reference](../reference/index.html) and the [module index](module-index.qmd) cover every module.
+
+## Verification design
+
+Two layers. **End-user runs** (notebooks 16, 18, 19): `pip install` from the published index, then inference with `TRITON_ATTN` on one and two T4s. **Historical acceptance suite** (notebook 15 on build 3; the scripts were removed from the repository, the reports are archived): an installer stage, then separate processes for `static`, `engine`, `parallel`, `server` and `summary`, each writing JSON with provenance. Only `PASS` passed; a missing report was `NOT_RUN`. See [Kaggle notebooks and evidence](kaggle-examples.qmd).

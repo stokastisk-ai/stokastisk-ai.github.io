@@ -1,0 +1,48 @@
+---
+title: "Telemetry and benchmarking on dual T4 GPUs"
+description: "Sample GPU utilisation with NVML, time communication segments and run Stokastisk's reproducible TP, PP and replica benchmarks without cherry-picking results."
+guide-section: "Measure and diagnose"
+---
+
+Telemetry and benchmarks are research tools, not throughput promises. On two PCIe-connected T4s, TP=2, PP=2 and replicas are slower than TP=1 for a model that fits one T4. This site publishes **no benchmark figures of its own**; the only measured relative figures in the project are in the [Feature matrix](feature-matrix.qmd) notes.
+
+## `stokastisk.telemetry`
+
+| Name | Purpose |
+|---|---|
+| `nvml.sample_once()` | one GPU sample: NVML if present, else `nvidia-smi`, else "unavailable" |
+| `nvml.GpuSampler(interval=0.5)` | background sampler: `with GpuSampler() as s: ...; s.summary()` |
+| `nvml.pcie_throughput_kib_s` | PCIe throughput reading when NVML provides it |
+| `metrics.percentile`, `summarize`, `throughput`, `imbalance_percent`, `token_latencies` | pure statistics |
+| `communication_profiler.SegmentTimer` | `wall(name)` and `cuda(name)` context managers, `totals()`, `report()` |
+| `worker_metrics.WorkerMetrics`, `balance_report` | compute versus communication versus idle time per worker |
+| `report.write_json(path, obj)`, `report.provenance()`, `report.span(name)` | JSON evidence; `span` is an optional OpenTelemetry span that is a no-op unless configured |
+| `cuda_profiler.nsight_status()` | whether Nsight is usable (never required) |
+
+```python
+from stokastisk.telemetry.nvml import GpuSampler
+
+with GpuSampler(1.0) as s:
+    ...                       # run something
+print(s.summary())
+```
+
+OpenTelemetry **exporters** are unsupported on this build: `opentelemetry-exporter-otlp` needs `protobuf<7`, and Kaggle ships protobuf 7.x. See [Dependency compatibility](dependency-compatibility.qmd).
+
+## `stokastisk.benchmarks`
+
+Identical workloads for every strategy; all runs are recorded (median, p95, min, max), never only the best.
+
+| Module | Entry points |
+|---|---|
+| `baseline` | `Workload`, `measure`, `run_engine`; workloads `SHORT`, `LONG`, `SCALING` |
+| `tensor_parallel` | `config_for(tp)`, `run(model, workloads, tp)` |
+| `pipeline_parallel` | `config_for`, `run`; stage-level compute and communication times are reported as `NOT_MEASURED` because vLLM's public API does not expose them |
+| `replica_parallel` | `run(model, workloads, devices=(0, 1))` |
+| `communication` | `bench_host_staged`, `bench_nccl`, `compare` |
+| `gpu_balance` | `from_replica_record` |
+| `report` | `comparison_table`, `relative_to`: combine records into JSON and a Markdown table; strategies that were not run are listed as `NOT_RUN` |
+
+Call benchmark code from a `__main__`-guarded script, because vLLM spawns processes.
+
+Next: [Diagnostics and compatibility](diagnostics-compatibility.qmd).

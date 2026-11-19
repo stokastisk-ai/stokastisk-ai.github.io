@@ -1,0 +1,22 @@
+{
+ "public_module_level_names": 203,
+ "documented_with_own_page": 137,
+ "module_index_only_no_docstring": 26,
+ "omitted_data_tables": 36,
+ "omitted_internal_helpers": 4,
+ "gaps": [],
+ "all_exports": 51,
+ "all_exports_documented": 49,
+ "all_exports_module_index_only": [],
+ "all_exports_upstream_or_omitted": [
+  "SamplingParams",
+  "__version__"
+ ],
+ "public_methods_on_documented_classes": {
+  "documented": 18,
+  "no-docstring (module index only)": 29
+ },
+ "missing_from_sdk_module_index": [],
+ "guide_citations_that_do_not_resolve": [],
+ "reference_objects_in_inventory": 263
+}

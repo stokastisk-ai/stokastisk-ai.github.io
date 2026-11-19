@@ -1,0 +1,17 @@
+# generated / local only
+_src/
+_site/
+_quarto/
+.quarto/
+.cache/
+.tools/
+.venv*/
+__pycache__/
+*.pyc
+.pytest_cache/
+# credentials must never be committed
+.env
+.env.*
+tokens.env
+*.token
+*.secret

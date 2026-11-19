@@ -1,0 +1,81 @@
+---
+title: "The LLM engine: generate, chat, complete and close"
+description: "Use stokastisk.LLM to run vLLM text generation and chat on Tesla T4 GPUs with serialised calls, timeouts, SamplingParams and guaranteed cleanup of GPU memory."
+guide-section: "Inference"
+---
+
+`stokastisk.LLM` wraps the bundled vLLM engine with the T4 defaults and adds lifecycle safety.
+
+```python
+from stokastisk import LLM, StokastiskConfig
+llm = LLM("Qwen/Qwen2.5-0.5B-Instruct", config=StokastiskConfig(max_model_len=2048))
+```
+
+* `model`: a Hugging Face id or local path (a non-empty string).
+* `config`: a `StokastiskConfig`; default `StokastiskConfig.from_env()`.
+* Extra keyword arguments go to vLLM and override config defaults, **except** a different attention backend or structured-output backend, which raise `StokastiskCompatibilityError`.
+* `execution_strategy="auto"` and `"replica_parallel"` are refused here (use `recommend_parallelism` and [`ReplicaPool`](parallelism.qmd)).
+* After start-up the SDK confirms the attention backend; a mismatch raises `AttentionBackendError`. Start-up failures raise `EngineError`.
+
+Use it as a context manager so the GPUs are always released.
+
+## Methods
+
+| Method | Purpose |
+|---|---|
+| `generate(prompts, sampling_params=None, *, timeout=None, **kw)` | vLLM `generate`. `prompts` is a list of non-empty strings; an empty list returns `[]`. |
+| `chat(messages, sampling_params=None, *, timeout=None, **kw)` | vLLM `chat`; the model's chat template is applied. `messages` is a list of `{"role", "content"}` dicts, or a list of such lists. |
+| `complete(prompt, *, max_tokens=64, temperature=0.0, timeout=None)` | One prompt in, text out. |
+| `generate_structured(prompts, schema, *, max_tokens=64, temperature=0.0, timeout=None)` | JSON that satisfies `schema` ([Structured output](structured-output.qmd)). |
+| `verify_attention_backend()` | Returns `"TRITON_ATTN"` or raises. |
+| `selected_attention_backend` | The backend recorded in the live engine configuration. |
+| `verify_structured_output_backend()`, `structured_output_backend` | Same for the pinned `xgrammar`. |
+| `close()` | Stops the engine and its workers and frees cached CUDA memory. Idempotent. |
+| `closed` | `True` after `close()`. |
+| `engine` | The underlying vLLM object (advanced use). |
+
+The [API reference for `LLM`](../reference/LLM.html) is generated from the source docstrings; members without a docstring appear in the [module index](module-index.qmd).
+
+## Sampling
+
+`generate` and `chat` return vLLM `RequestOutput` objects; the text is `out[0].outputs[0].text`.
+
+```python
+from stokastisk import SamplingParams        # lazy import from the bundled vLLM
+
+params = SamplingParams(temperature=0.2, max_tokens=96)
+outs = llm.generate(["Explain TCP in two sentences."], params)
+print(outs[0].outputs[0].text)
+```
+
+`SamplingParams` is **vLLM's class, not a Stokastisk class**: `stokastisk.SamplingParams` imports it lazily from the bundled vLLM 0.25.1, so its signature is vLLM's. See the [vLLM sampling parameters documentation](https://docs.vllm.ai/en/stable/api/vllm/sampling_params/) for the version-appropriate reference.
+
+Qwen models ship a `generation_config.json`; vLLM applies its defaults (for example `temperature=0.7` and a repetition penalty) unless you pass your own `SamplingParams`. Use `temperature=0.0` for repeatable output.
+
+## Timeouts and concurrency
+
+* Calls are serialised: one engine call at a time per `LLM`; concurrent callers queue and never interleave.
+* `timeout=` (seconds) raises `EngineTimeoutError`. Offline generation **cannot be cancelled**: the request keeps running inside vLLM and the next call waits for it.
+* Inputs are validated before the engine is touched. Calls after `close()` raise `EngineClosedError`.
+
+## Closing
+
+`close()` always runs every cleanup step. If the engine's own shutdown failed it raises `EngineCloseError` *after* cleaning up, with the original exception chained. `with LLM(...)` never lets a close error hide an exception already propagating.
+
+What the Kaggle runs (build 3) showed, kept apart on purpose:
+
+* **GPU memory:** after `close()` both T4s returned to 14.46 of 14.56 GiB free in every notebook-18 and notebook-19 run (0.5B at TP=1; 3B at TP=2 and PP=2; Coder-7B at TP=2 and PP=2).
+* **Log line:** at the end of every TP=2 and PP=2 engine, vLLM's process manager logged `[shutdown] Process manager: force killing remaining processes count=1`. `close()` still completed without raising and the memory was recovered, so it is a warning about one worker that had to be killed, not a leak. It was not seen in the single-GPU 0.5B run. Check memory yourself between experiments with `torch.cuda.mem_get_info(i)`.
+
+## Example: chat with a system prompt
+
+```python
+with LLM("Qwen/Qwen2.5-0.5B-Instruct", config=StokastiskConfig(max_model_len=2048)) as llm:
+    reply = llm.chat([
+        {"role": "system", "content": "You are a concise assistant."},
+        {"role": "user", "content": "Five practical uses of Python for data analysis."},
+    ])
+    print(reply[0].outputs[0].text)
+```
+
+Next: [Structured output](structured-output.qmd).

@@ -1,0 +1,40 @@
+---
+title: "CUDA helpers, NCCL self-test and experimental transports"
+description: "Optional Stokastisk modules for CUDA streams, events and memory, NCCL collective self-tests and an experimental host-staged GPU-to-GPU transport for machines without peer access."
+guide-section: "Two GPUs"
+---
+
+These modules are optional, import-light, and degrade to an explicit "unavailable" instead of failing. They are not needed for normal inference.
+
+::: {.callout-warning}
+## Experimental
+`stokastisk.communication` is **experimental and not used by the engine**. Nothing in it is selected automatically.
+:::
+
+## `stokastisk.cuda`
+
+Thin PyTorch-backed helpers that never touch vLLM's own streams:
+
+* `device`: `device_count`, `on_device`, `synchronize`
+* `streams`: `create_stream`, `stream_synchronize`
+* `events`: `new_event`, `record`, `make_wait`, `elapsed_ms`
+* `memory`: `mem_info`, `pinned_empty`, `timed_copy`
+
+```python
+from stokastisk.cuda.memory import mem_info
+print(mem_info(0))            # free and total memory for GPU 0
+```
+
+## `stokastisk.nccl`
+
+`run_collective_selftest()` runs all-reduce, all-gather, reduce-scatter, broadcast and barrier over a 2-rank `torch.distributed.run` job. It never raises and returns a report. NCCL collectives on both ranks were Kaggle-tested in an earlier notebook (04) as recorded in the [Feature matrix](feature-matrix.qmd). Kaggle resolves NCCL to its cu12 build 2.32.3; Stokastisk's own binaries do not link it.
+
+## `stokastisk.communication`
+
+* `nccl.time_p2p`, `nccl.time_allreduce`: NCCL timing helpers.
+* `cuda_transport.HostStagedTransport`, `pinned_memory.PinnedBufferRing`, `synchronization.BufferTicket`, `native.build_native`, `native.load_native`, `native.NativeHostStaged`: an experimental host-staged GPU-to-GPU copy for machines without peer access. The optional C++ source is `native/host_staged_xfer.cpp` in the repository and needs `nvcc`.
+* `transport_registry.list_transports()`: known transports with an honest status.
+
+The benchmark `benchmarks.communication.compare` encodes the decision rule: host-staged is integrated nowhere unless it wins.
+
+Next: [Telemetry and benchmarking](telemetry-benchmarking.qmd).

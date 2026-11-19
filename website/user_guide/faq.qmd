@@ -1,0 +1,41 @@
+---
+title: "FAQ: what Stokastisk is and is not"
+description: "Answers about Stokastisk: an independent open-source Python SDK for vLLM on Kaggle dual Tesla T4 GPUs; relation to vLLM and other projects, supported hardware, models and licence."
+guide-section: "Design"
+---
+
+## What is Stokastisk?
+
+An independent, open-source Python 3.13 SDK for **Kaggle's dual NVIDIA Tesla T4 GPUs**. It bundles vLLM 0.25.1 built for SM75 (compute capability 7.5) with CUDA 13.0 and runs attention only through vLLM's Triton backend (`TRITON_ATTN`). It adds a validated configuration, a safe `LLM` lifecycle, structured output, an OpenAI-compatible server wrapper, tensor, pipeline and replica parallelism, topology discovery and diagnostics.
+
+## Is it related to the "Stochastic" AI organisation or to the vLLM project?
+
+No. "Stokastisk" is the name of this independent SDK and is not affiliated with any company named Stochastic. vLLM is a separate Apache-2.0 project; Stokastisk bundles a modified copy of vLLM 0.25.1 (Flash-family modules removed) and is not endorsed by the vLLM project or by NVIDIA or Kaggle. "NVIDIA" and "Tesla T4" name the hardware the SDK targets.
+
+## Why does it exist?
+
+Kaggle's T4s are compute capability 7.5. This SDK ships a vLLM tree in which only the Triton attention backend can be selected, and verifies that choice at runtime (`llm.verify_attention_backend()`).
+
+## Which hardware and software are supported?
+
+Kaggle notebooks with 2 × Tesla T4, Python 3.13, PyTorch 2.11.0+cu130, Triton 3.6.0 and CUDA 13.0, FP16. Not supported: bfloat16, FlashAttention, FlashInfer, FlashMLA, native FP8/FP4, L4/SM89, Mistral-family models, OpenTelemetry exporters, and calling `vllm.LLM` or `vllm serve` directly.
+
+## Which models work?
+
+Exactly three checkpoints were run on Kaggle: Qwen/Qwen2.5-0.5B-Instruct, Qwen/Qwen2.5-3B-Instruct and Qwen/Qwen2.5-Coder-7B-Instruct, in the modes listed under [Diagnostics](diagnostics-compatibility.qmd#the-verified-models). Anything else reports `UNKNOWN_REQUIRES_EVIDENCE`: unproven, not forbidden.
+
+## Is two GPUs faster than one?
+
+Not for a model that fits one T4. The GPUs share a PCIe host bridge (no NVLink), and TP=2, PP=2 and replicas were slower than TP=1 in the recorded runs. Use two GPUs when the model does not fit one.
+
+## Is it on PyPI?
+
+No. It installs from a wheel on Hugging Face; see [Install](installation.qmd).
+
+## Which licence?
+
+Apache-2.0. vLLM is Apache-2.0, copyright the vLLM project.
+
+## Where are the source, wheels and issues?
+
+Source and issues: [github.com/stokastisk-ai/stokastisk](https://github.com/stokastisk-ai/stokastisk). Wheels: [huggingface.co/waqasm86/stokastisk](https://huggingface.co/waqasm86/stokastisk). Release: [v0.1.0](https://github.com/stokastisk-ai/stokastisk/releases/tag/v0.1.0).

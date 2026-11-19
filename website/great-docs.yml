@@ -1,0 +1,244 @@
+# Great Docs configuration for the Stokastisk documentation site.
+# Staged over the Stokastisk SDK checkout by scripts/stage_source.py and built with:
+#   great-docs build --config website/great-docs.yml
+# Keys were verified against the Great Docs checkout recorded in SOURCE.lock.json
+# (`great-docs config` template and docs/user_guide/configuration.qmd).
+
+display_name: Stokastisk
+parser: numpy
+dynamic: false          # static analysis only: never import stokastisk / vLLM / CUDA while documenting
+
+repo: https://github.com/stokastisk-ai/stokastisk
+repo_style: widget
+source:
+  enabled: true
+  branch: SDK_COMMIT   # replaced by scripts/stage_source.py with the pinned SDK commit, so links never move
+
+# Exactly one canonical URL: the GitHub project site of the stokastisk-docs repository.
+site_url: https://stokastisk-ai.github.io/stokastisk-docs/
+
+pypi: false             # Stokastisk is distributed from Hugging Face + a PEP 503 index, not PyPI
+package_info_page: false
+attribution: true
+dark_mode_toggle: true
+back_to_top: true
+
+logo:
+  light: assets/logo.svg
+  dark: assets/logo-dark.svg
+  show_title: false
+favicon:
+  icon: assets/icon.png
+  apple_touch: assets/apple-touch-icon.png
+  og_image: assets/og-image.png
+
+hero:
+  enabled: false        # the homepage (website/index.qmd) is hand-written
+
+homepage: index
+
+markdown_pages:
+  enabled: true
+  widget: true
+
+social_cards:
+  enabled: true
+  image: assets/og-image.png
+  twitter_card: summary_large_image
+
+seo:
+  enabled: true
+  sitemap:
+    enabled: true
+  robots:
+    enabled: true
+    allow_all: true
+  canonical:
+    enabled: true
+    base_url: https://stokastisk-ai.github.io/stokastisk-docs/
+  title_template: "{page_title} | {site_name}"
+  structured_data:
+    enabled: true
+    type: SoftwareSourceCode
+  default_description: >-
+    Stokastisk is an independent open-source Python 3.13 SDK that runs a bundled vLLM 0.25.1 engine
+    with Triton attention on Kaggle's dual NVIDIA Tesla T4 GPUs (SM75, CUDA 13.0).
+
+skill:
+  enabled: true
+  well_known: true
+
+user_guide:
+  - section: "Get started"
+    contents:
+      - installation.qmd
+      - quickstart.qmd
+      - configuration.qmd
+  - section: "Inference"
+    contents:
+      - engine.qmd
+      - structured-output.qmd
+      - openai-server.qmd
+  - section: "Two GPUs"
+    contents:
+      - parallelism.qmd
+      - topology-and-memory.qmd
+      - cuda-nccl-communication.qmd
+  - section: "Measure and diagnose"
+    contents:
+      - telemetry-benchmarking.qmd
+      - diagnostics-compatibility.qmd
+      - errors-troubleshooting.qmd
+  - section: "Evidence and limits"
+    contents:
+      - feature-matrix.qmd
+      - kaggle-examples.qmd
+      - release-verification.qmd
+      - production-limitations.qmd
+  - section: "Design"
+    contents:
+      - architecture.qmd
+      - dependency-compatibility.qmd
+      - faq.qmd
+  - section: "Reference index"
+    contents:
+      - module-index.qmd
+
+reference:
+  - title: "Engine and configuration"
+    desc: "The LLM engine facade and the validated configuration object."
+    contents:
+      - LLM
+      - StokastiskConfig
+      - VLLM_BASE_VERSION
+      - CUDA_BUILD_TARGET
+      - GPU_COMPUTE_CAPABILITY
+  - title: "OpenAI-compatible serving"
+    desc: "ServerProcess, the request helpers and server utilities (stokastisk.serving)."
+    contents:
+      - serving
+  - title: "Structured output"
+    desc: "JSON-schema validation and SamplingParams helpers (xgrammar backend)."
+    contents:
+      - validate_json_output
+      - structured.check_schema
+      - structured.json_schema_params
+  - title: "Parallelism and replicas"
+    desc: "ReplicaPool, the parallelism recommender, scheduler, routing, queue and memory model."
+    contents:
+      - recommend_parallelism
+      - Recommendation
+      - parallel.recommender.default_recommendation
+      - parallel.replica.ReplicaPool
+      - parallel.scheduler
+      - parallel.routing
+      - parallel.queue
+      - parallel.memory
+      - parallel.worker
+  - title: "Topology and limits"
+    desc: "GPU topology discovery, PCIe classification, peer access and Kaggle resource limits."
+    contents:
+      - discover_topology
+      - Topology
+      - topology.models.DeviceInfo
+      - topology.models.PeerAccess
+      - topology.models.LINK_CLASSES
+      - topology.pcie
+      - topology.peer_access
+      - topology.gpu_capabilities
+      - topology.nvml
+      - LIMITS
+      - limits.KaggleLimits
+      - check_resources
+      - cpu_budget
+      - working_dir_status
+      - limits.available_cpus
+      - limits.threads_per_worker
+      - limits.cpu_thread_env
+      - limits.system_ram_gib
+      - limits.dir_size_bytes
+  - title: "Diagnostics and policy"
+    desc: "Environment validation, backend policy audit and wheel scanners."
+    contents:
+      - validate_environment
+      - validate_kaggle_t4
+      - report
+      - prohibited_report
+      - discover_gpus
+      - check_native_extensions
+      - diagnostics.peer_access_matrix
+      - diagnostics.flash_attn_native_loaded
+      - prohibited.is_prohibited_path
+      - prohibited.is_binary
+      - prohibited.native_markers
+      - prohibited.scan_members
+      - prohibited.scan_wheel
+      - prohibited.scan_tree
+      - prohibited.flash_in_maps
+      - prohibited.loaded_flash_libraries
+  - title: "Compatibility checks"
+    desc: "Offline model, dtype, quantization and feature checks backed by recorded Kaggle evidence."
+    contents:
+      - check_model
+      - check_feature
+      - check_dtype
+      - check_quantization
+      - feature_matrix
+      - compat.get_feature
+      - compat.FEATURES
+      - compat.MODEL_EVIDENCE
+      - compat.KAGGLE_VERIFIED_ARCHITECTURES
+      - compat.QUANT_MIN_CAPABILITY
+      - compat.BLOCKING
+      - compat.read_registry
+      - compat.find_missing_imports
+      - compat.uses_removed_backend
+      - dependencies
+  - title: "Exceptions"
+    desc: "Every exception raised by the SDK derives from StokastiskError."
+    contents:
+      - StokastiskError
+      - ConfigurationError
+      - UnsupportedParallelismError
+      - InsufficientMemoryError
+      - StokastiskCompatibilityError
+      - EnvironmentValidationError
+      - GPUDiscoveryError
+      - TopologyError
+      - EngineError
+      - AttentionBackendError
+      - EngineClosedError
+      - EngineTimeoutError
+      - EngineCloseError
+      - StructuredOutputError
+      - MissingDependencyError
+      - ServerError
+      - ServerStartupError
+      - ServerHTTPError
+      - ServerShutdownError
+      - ReplicaError
+  - title: "Telemetry"
+    desc: "Optional GPU, communication and worker telemetry (stokastisk.telemetry)."
+    contents:
+      - telemetry
+  - title: "CUDA, NCCL and communication"
+    desc: "Optional CUDA helpers, the NCCL self-test and the experimental host-staged transport."
+    contents:
+      - cuda
+      - nccl.run_collective_selftest
+      - communication.transport_registry
+      - communication.cuda_transport
+      - communication.pinned_memory
+      - communication.synchronization
+      - communication.native
+      - communication.nccl
+  - title: "Benchmarks"
+    desc: "Reproducible dual-GPU benchmark modules."
+    contents:
+      - benchmarks.baseline
+      - benchmarks.tensor_parallel
+      - benchmarks.pipeline_parallel
+      - benchmarks.replica_parallel
+      - benchmarks.communication
+      - benchmarks.gpu_balance
+      - benchmarks.report

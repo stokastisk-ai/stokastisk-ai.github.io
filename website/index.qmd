@@ -1,0 +1,60 @@
+---
+title: "Stokastisk – Python SDK for vLLM Inference on Kaggle Dual NVIDIA T4 GPUs"
+pagetitle: "Stokastisk – Python SDK for vLLM Inference on Kaggle Dual NVIDIA T4 GPUs"
+description-meta: "Stokastisk is an independent open-source Python 3.13 SDK for Kaggle's dual NVIDIA Tesla T4 GPUs: bundled vLLM 0.25.1, Triton attention (SM75), structured output, an OpenAI-compatible server and tensor, pipeline and replica parallelism."
+---
+
+**Stokastisk is an independent open-source Python SDK that runs a bundled vLLM 0.25.1 inference engine on Kaggle's dual NVIDIA Tesla T4 GPUs (SM75, CUDA 13.0) with Triton attention (`TRITON_ATTN`), installed with one `pip` command.**
+
+It is not affiliated with vLLM, NVIDIA, Kaggle or any company named Stochastic. See the [FAQ](user-guide/faq.html).
+
+## Install
+
+In a Kaggle notebook with *GPU T4 × 2*, *Internet ON* and Python 3.13, pin the wheel by URL and SHA256 with PyPI as the only index:
+
+```bash
+!python -m pip install --index-url https://pypi.org/simple "stokastisk @ https://huggingface.co/waqasm86/stokastisk/resolve/main/wheels/stokastisk-0.1.0-5-cp313-cp313-linux_x86_64.whl#sha256=fe80d7c36fa78cf8a26feb1e00bb5f1f006ca45a027450353603976320ae0b3e"
+```
+
+More options and verification: [Install Stokastisk on Kaggle](user-guide/installation.html).
+
+## First generation
+
+```python
+from stokastisk import LLM, StokastiskConfig
+
+with LLM("Qwen/Qwen2.5-0.5B-Instruct", config=StokastiskConfig(max_model_len=2048)) as llm:
+    print(llm.verify_attention_backend())                 # TRITON_ATTN
+    print(llm.complete("The capital of France is", max_tokens=16))
+```
+
+## What it provides
+
+| Capability | Where to read |
+|---|---|
+| Validated configuration and T4 defaults | [Configuration](user-guide/configuration.html) |
+| `LLM`: generate, chat, complete, safe close | [The LLM engine](user-guide/engine.html) |
+| JSON-schema output with pinned xgrammar | [Structured output](user-guide/structured-output.html) |
+| OpenAI-compatible server, streaming, metrics | [OpenAI-compatible server](user-guide/openai-server.html) |
+| TP=2, experimental PP=2, independent replicas | [Parallelism](user-guide/parallelism.html) |
+| Topology, memory estimates, CUDA, NCCL | [Topology](user-guide/topology-and-memory.html), [CUDA and NCCL](user-guide/cuda-nccl-communication.html) |
+| Telemetry and benchmarks | [Telemetry and benchmarking](user-guide/telemetry-benchmarking.html) |
+| Offline model and feature checks | [Diagnostics](user-guide/diagnostics-compatibility.html) |
+| Every public class and function | [API reference](reference/index.html) |
+
+## What has actually been verified
+
+| Claim | Evidence |
+|---|---|
+| Qwen2.5-0.5B (TP=1, TP=2, PP=2, replicas), Qwen2.5-3B (TP=2, PP=2) and Qwen2.5-Coder-7B (TP=2, PP=2) ran on Kaggle 2 × T4 with `TRITON_ATTN` | **Kaggle-tested on wheel build 3** (now withdrawn) |
+| The current wheel, **build 5**, was not itself run on Kaggle | it differs from build 3 only in compatibility reporting and one error message; build 3's evidence is **inherited**, and build 5 is **verified on CPU** |
+| Other models, other GPUs, throughput | **not claimed** |
+
+Read the full account in [Release verification](user-guide/release-verification.html), [Kaggle notebooks and evidence](user-guide/kaggle-examples.html) and [Production readiness and limitations](user-guide/production-limitations.html).
+
+## Links
+
+* Source and issues: [github.com/stokastisk-ai/stokastisk](https://github.com/stokastisk-ai/stokastisk)
+* Release: [v0.1.0](https://github.com/stokastisk-ai/stokastisk/releases/tag/v0.1.0)
+* Wheels and model card: [huggingface.co/waqasm86/stokastisk](https://huggingface.co/waqasm86/stokastisk)
+* Package index: [stokastisk-ai.github.io/stokastisk/simple/](https://stokastisk-ai.github.io/stokastisk/simple/)

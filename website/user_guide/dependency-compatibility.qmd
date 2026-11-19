@@ -1,0 +1,36 @@
+---
+title: "Dependency compatibility with Kaggle's image"
+description: "How Stokastisk's 19 pinned dependencies were resolved against Kaggle's real package inventory without touching PyTorch or Triton, plus the Flash-free policy and known version caveats."
+guide-section: "Design"
+---
+
+Builds 4 and 5 have exactly the same dependency pins, locks and vLLM tree as build 3; this page describes all of them. The Kaggle runs cited were executed on build 3.
+
+## Method
+
+`scripts/release/lock_closure.py` walks PyPI `Requires-Dist` metadata for each profile's pinned roots against the **real Kaggle inventory** (`requirements/kaggle-baseline-2026-11-13.json`, 937 packages). A requirement satisfied by the baseline is kept and not walked; one the baseline does *not* satisfy is reported as a **conflict**; an absent package is resolved to the highest version that has a CPython 3.13 / Linux x86_64 / glibc ≤ 2.35 wheel. The lock lists the SHA256 of every compatible wheel. All four profiles resolved with 0 conflicts and 0 unresolvable requirements.
+
+| Profile | Installed by default | New packages (absent from Kaggle) |
+|---|---|---|
+| `core` | yes | apache-tvm-ffi 0.1.9, cbor2 6.2.0.post2, llguidance 1.7.6, msgspec 0.22.0, openai-harmony 0.0.8, partial-json-parser 0.2.1.1.post7, pybase64 1.5.1, xgrammar 0.2.3 |
+| `structured-output` | yes | diskcache 5.6.3, interegular 0.3.3, lm-format-enforcer 0.11.3, outlines-core 0.2.14 |
+| `serving` | yes | fastapi-cli 0.0.33, model-hosting-container-standards 0.1.16, prometheus-fastapi-instrumentator 8.1.0, pydantic-settings 2.16.2, rich-toolkit 0.20.6, sse-starlette 3.7.0, supervisor 4.3.0 |
+| `models` | **no** | astor, compressed-tensors 0.17.0, depyf 0.20.0, loguru, setproctitle |
+| observability | **unsupported** | `opentelemetry-exporter-otlp` needs `protobuf<7`; Kaggle has protobuf 7.36.2 |
+
+The `core`, `structured-output` and `serving` profiles together are the 19 packages the wheel pins exactly. Those 19 are *additional pins*; the wheel's `METADATA` has other requirements as well, most of which Kaggle already satisfies.
+
+## xgrammar 0.2.3
+
+xgrammar 0.2.5.post1 declares `transformers<5`, which conflicts with Kaggle's transformers 5.20.2; 0.2.6 and later need `apache-tvm-ffi>=0.1.10`, which conflicts with vLLM's `apache-tvm-ffi==0.1.9`. Versions 0.2.1 to 0.2.3 satisfy both. vLLM 0.25.1 declares `xgrammar >=0.2.1,<1.0.0`, so **0.2.3 is inside vLLM's supported range**: a version choice, not a patch. No distribution is modified and no metadata is edited.
+
+## FlashAttention, FlashInfer, FlashMLA
+
+* **Shipped:** none. 28 modules were removed from the byte-pinned vLLM tree; every native object is byte-identical (the wheel has no Flash `.so`, `.cubin` or `.ptx`).
+* **Not removed by design** (their names contain "flash" but they are not FlashAttention): `triton_reshape_and_cache_flash.py` (a Triton KV-cache write kernel used by `TRITON_ATTN`), `longcat_flash*.py` (a model family) and `*dflash*` (a speculative-decoding method).
+* **Selection:** `AttentionBackendEnum` refuses every Flash-family member and `AttentionConfig` rejects them at construction. CPU-evaluated for compute capability 7.5, the valid backends are `TRITON_ATTN` and `FLEX_ATTENTION`.
+* **Direct `vllm.LLM` or `vllm serve`:** an *unsupported entry point*. It cannot select Flash with this tree, but it bypasses the SDK's dtype, NCCL and structured-output policy.
+
+## Protected Kaggle image facts
+
+`torch 2.11.0+cu130`, `triton 3.6.0`, `transformers 5.20.2`, `fastapi 0.141.1` (upstream vLLM caps `fastapi<0.137`), `protobuf 7.36.2`, `numpy 1.26.4` (never reinstalled). The wheel is installed with pip using exact pins and hashes; the build-3 inventory check showed that no pre-installed distribution changed or disappeared and that exactly the planned packages were added.

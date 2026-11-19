@@ -1,0 +1,67 @@
+---
+title: "Quickstart: first generation on a Tesla T4"
+description: "Run your first Stokastisk inference on Kaggle: load Qwen2.5-0.5B-Instruct with the Triton attention backend, generate text, chat, and release both GPUs."
+guide-section: "Get started"
+---
+
+After [installing](installation.qmd), run engine code in an ordinary notebook cell. The model downloads from Hugging Face on first use.
+
+```python
+from stokastisk import LLM, StokastiskConfig
+
+config = StokastiskConfig(max_model_len=2048)             # one T4, FP16, TRITON_ATTN
+
+with LLM("Qwen/Qwen2.5-0.5B-Instruct", config=config) as llm:
+    print(llm.verify_attention_backend())                 # TRITON_ATTN
+    print(llm.complete("The capital of France is", max_tokens=16))
+    reply = llm.chat([{"role": "user", "content": "Say hello in five words."}])
+    print(reply[0].outputs[0].text)
+```
+
+`with` releases the GPUs on exit. Without it, call `llm.close()`.
+
+::: {.callout-note}
+## Evidence
+This pattern ran on Kaggle in notebook 18 (plain cells) and notebook 16 (script form) on build 3. See [Kaggle notebooks and evidence](kaggle-examples.qmd).
+:::
+
+## Running as a script
+
+vLLM starts its engine in a spawned process, so in a **script** keep engine code under a main guard:
+
+```python
+%%writefile main.py
+import stokastisk
+
+
+def main():
+    config = stokastisk.StokastiskConfig(max_model_len=2048)
+    with stokastisk.LLM("Qwen/Qwen2.5-0.5B-Instruct", config=config) as llm:
+        print(llm.verify_attention_backend())
+        print(llm.complete("The capital of France is", max_tokens=16))
+
+
+if __name__ == "__main__":      # required: vLLM spawns processes that re-import the script
+    main()
+```
+
+```bash
+!python main.py
+```
+
+## Which model fits?
+
+Each T4 has about 15 GiB. FP16 weights take about 2 bytes per parameter, plus KV cache.
+
+| Model size | Use |
+|---|---|
+| up to about 3B | one GPU, `tensor_parallel_size=1` (fastest) |
+| about 7B (14 GiB of weights) | both GPUs, `tensor_parallel_size=2` |
+
+Ask the SDK instead of guessing: `stokastisk.recommend_parallelism(...)` ([Parallelism](parallelism.qmd)) and `stokastisk.check_model(...)` ([Diagnostics](diagnostics-compatibility.qmd)), which reports whether that exact checkpoint was ever run on Kaggle.
+
+## What you will see
+
+`Triton kernel JIT compilation during inference` warnings on the first request are informational (a one-time latency spike). The first engine start downloads the model weights from Hugging Face.
+
+Next: [Configuration](configuration.qmd).

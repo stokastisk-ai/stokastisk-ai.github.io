@@ -1,0 +1,46 @@
+--- a/scripts/release/build_docs_site.py	2026-11-19 22:53:20.778207425 +0500
++++ b/scripts/release/build_docs_site.py	2026-11-19 22:53:20.805475048 +0500
+@@ -9,6 +9,11 @@
+ GUIDE = ROOT / "docs/guide"
+ SDK = ROOT / "sdk/stokastisk"
+ BASE = "https://github.com/stokastisk-ai/stokastisk"
++NEW_SITE = "https://stokastisk-ai.github.io/stokastisk-docs/"       # the single canonical documentation site (Great Docs)
++CANONICAL = {"index": "", "getting-started": "user-guide/installation.html", "configuration": "user-guide/configuration.html", "engine": "user-guide/engine.html",
++             "structured-output": "user-guide/structured-output.html", "server": "user-guide/openai-server.html", "multi-gpu": "user-guide/parallelism.html",
++             "diagnostics": "user-guide/diagnostics-compatibility.html", "feature-matrix": "user-guide/feature-matrix.html", "errors": "user-guide/errors-troubleshooting.html",
++             "advanced": "user-guide/telemetry-benchmarking.html", "troubleshooting": "user-guide/errors-troubleshooting.html", "api-reference": "user-guide/module-index.html"}
+ ORDER = ["index", "getting-started", "configuration", "engine", "structured-output", "server", "multi-gpu", "diagnostics", "feature-matrix", "errors", "advanced", "troubleshooting", "api-reference"]
+ TITLES = {"index": "Overview", "getting-started": "1. Getting started", "configuration": "2. Configuration", "engine": "3. The LLM engine", "structured-output": "4. Structured output",
+           "server": "5. OpenAI-compatible server", "multi-gpu": "6. Using both GPUs", "diagnostics": "7. Checks and diagnostics", "feature-matrix": "   Feature matrix", "errors": "8. Errors", "advanced": "9. Advanced modules",
+@@ -110,7 +115,7 @@
+         body = re.sub(r'href="([a-z-]+)\.md(#[^"]*)?"', r'href="\1.html\2"', body)
+         nav = "".join(f'<a class="{"cur" if n == name else ""}" href="{n}.html">{html.escape(TITLES[n])}</a>' for n in ORDER)
+         page = (f'<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+-                f'<title>{html.escape(TITLES[name])} · Stokastisk 0.1.0</title><link rel="stylesheet" href="style.css"></head><body><div class="wrap">'
++                f'<title>{html.escape(TITLES[name])} · Stokastisk 0.1.0</title><link rel="canonical" href="{NEW_SITE}{CANONICAL[name]}"><link rel="stylesheet" href="style.css"></head><body><div class="wrap">'
+                 f'<nav><h1>Stokastisk</h1><div class="v">0.1.0 · Kaggle 2 × T4 · Python 3.13</div>{nav}'
+                 f'<div class="ext"><a href="{BASE}">GitHub</a><a href="https://huggingface.co/waqasm86/stokastisk">Hugging Face</a><a href="../">Package index</a></div></nav>'
+                 f'<main>{body}<footer>Stokastisk 0.1.0 · Apache-2.0 · <a href="{BASE}/blob/main/docs/guide/{name}.md">edit this page on GitHub</a></footer></main></div></body></html>')
+--- a/README.md	2026-11-19 22:53:20.787109556 +0500
++++ b/README.md	2026-11-19 22:53:20.805733643 +0500
+@@ -18,6 +18,9 @@
+ | Attention | `TRITON_ATTN` only — no FlashAttention / FlashInfer / FlashMLA code is shipped (requesting one raises `ProhibitedBackendError`) |
+ | Structured output | xgrammar 0.2.3, pinned (never `auto`); every output validated against its schema |
+ 
++## Documentation
++Full documentation, generated API reference and release evidence: **<https://stokastisk-ai.github.io/stokastisk-docs/>**.
++
+ ## User guide (Kaggle)
+ **1. Notebook settings:** Accelerator **GPU T4 × 2**, **Internet ON**, a Python 3.13 image.
+ 
+--- a/docs/HUB_README.md	2026-11-19 22:53:20.793126372 +0500
++++ b/docs/HUB_README.md	2026-11-19 22:53:20.805886700 +0500
+@@ -5,7 +5,7 @@
+ ---
+ # Stokastisk 0.1.0 — vLLM 0.25.1 + Triton attention + CUDA binaries for Kaggle's 2 × Tesla T4
+ 
+-This repository is the **CDN for the Stokastisk wheel** (SDK + bundled vLLM 0.25.1 + CUDA 13.0 `sm_75` binaries, no FlashAttention/FlashInfer/FlashMLA). Source, docs and tests: <https://github.com/stokastisk-ai/stokastisk> · User guide: <https://stokastisk-ai.github.io/stokastisk/docs/>
++This repository is the **CDN for the Stokastisk wheel** (SDK + bundled vLLM 0.25.1 + CUDA 13.0 `sm_75` binaries, no FlashAttention/FlashInfer/FlashMLA). Source, docs and tests: <https://github.com/stokastisk-ai/stokastisk> · Documentation and API reference: <https://stokastisk-ai.github.io/stokastisk-docs/> (earlier user guide: <https://stokastisk-ai.github.io/stokastisk/docs/>)
+ 
+ ## Install (one line, Kaggle: GPU T4 × 2, Internet ON, Python 3.13)
+ ```bash

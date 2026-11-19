@@ -1,0 +1,72 @@
+---
+title: "Install Stokastisk on Kaggle"
+description: "Install the Stokastisk Python SDK on Kaggle's dual Tesla T4 notebooks with one SHA256-pinned pip command, then verify the bundled vLLM 0.25.1 and Triton attention policy."
+guide-section: "Get started"
+---
+
+Stokastisk is an independent, open-source Python SDK. It targets one runtime: **Kaggle notebooks with two NVIDIA Tesla T4 GPUs** (compute capability 7.5, "SM75"), Python 3.13, PyTorch 2.11.0+cu130, Triton 3.6.0 and CUDA 13.0. It is installed from a wheel hosted on Hugging Face, not from PyPI.
+
+## Notebook settings
+
+| Setting | Value |
+|---|---|
+| Accelerator | **GPU T4 × 2** |
+| Internet | **ON** |
+| Python | 3.13 image |
+
+## Install (recommended: pinned by URL and SHA256)
+
+```bash
+!python -m pip install --index-url https://pypi.org/simple "stokastisk @ https://huggingface.co/waqasm86/stokastisk/resolve/main/wheels/stokastisk-0.1.0-5-cp313-cp313-linux_x86_64.whl#sha256=fe80d7c36fa78cf8a26feb1e00bb5f1f006ca45a027450353603976320ae0b3e"
+```
+
+pip downloads the 38 MB wheel (`38,057,515` bytes) from the Hugging Face CDN, **refuses it unless its SHA256 matches**, and installs 19 pinned dependencies from PyPI. Kaggle's own PyTorch, Triton and transformers are not replaced.
+
+Prefix the command with `!` in a Kaggle shell cell; in a terminal drop the `!`.
+
+::: {.callout-note}
+## Which build is this?
+The project version is always `0.1.0`. The number after it in the file name (`-5-`) is the wheel **build tag**. Build 5 is the only published build and the current install target. The Kaggle GPU runs documented on this site were made on build 3, which has been withdrawn; build 5 differs from it only in compatibility reporting and one error message. See [Release verification](release-verification.qmd).
+:::
+
+## Alternative: the package index
+
+```bash
+!pip install stokastisk --extra-index-url https://stokastisk-ai.github.io/stokastisk/simple/
+```
+
+The index lists the same build-5 file with the same SHA256. It is a convenience: `--extra-index-url` makes pip consider PyPI as well, so a different project named `stokastisk` published on PyPI could in principle be chosen. The name is unregistered on PyPI today; the pinned command above removes the question. The existing index at `https://stokastisk-ai.github.io/stokastisk/simple/` is unchanged by this documentation site.
+
+## Verify the installation
+
+```python
+import json
+import stokastisk
+
+print(stokastisk.__version__)                                # 0.1.0
+print(json.dumps(stokastisk.prohibited_report(), indent=1))  # "clean": true
+```
+
+`clean: true` means no FlashAttention, FlashInfer or FlashMLA code is present in the install. `stokastisk.report()` prints a non-raising summary of Python, torch, CUDA, GPUs and native extensions and is safe on a CPU-only machine.
+
+## Reinstall and uninstall
+
+Use `--force-reinstall --no-deps` with the same pinned command to reinstall cleanly. Remove with `pip uninstall stokastisk`.
+
+## What gets installed
+
+| Part | Detail |
+|---|---|
+| `stokastisk/` | the SDK ([API reference](../reference/index.html)) |
+| `vllm/` | vLLM 0.25.1 from a byte-pinned base wheel, built once for `sm_75` and CUDA 13.0, with every FlashAttention, FlashInfer and FlashMLA module removed |
+| dependencies | 19 exactly pinned packages absent from Kaggle's image (see [Dependency compatibility](dependency-compatibility.qmd)) |
+
+## Common installation problems
+
+| Symptom | Likely cause |
+|---|---|
+| `No matching distribution` / `is not a supported wheel` | notebook is not Python 3.13, or Internet is OFF |
+| `THESE PACKAGES DO NOT MATCH THE HASHES` | the downloaded file is not the one the command names; do not use it |
+| pip wants to change torch or transformers | should not happen; report it with the complete `pip install` log |
+
+More in [Errors and troubleshooting](errors-troubleshooting.qmd). Next: [Quickstart](quickstart.qmd).
